@@ -1,10 +1,16 @@
 from fastapi import APIRouter
-from app.api.v1.endpoints import deals, prospects, ai
+from app.api.v1.endpoints import deals, prospects, ai, templates, activities, sequences, triggers, metrics, template_sequences
 
 api_router = APIRouter(prefix="/api/v1")
 
 api_router.include_router(deals.router)
 api_router.include_router(prospects.router)
 api_router.include_router(ai.router)
+api_router.include_router(templates.router)
+api_router.include_router(activities.router)
+api_router.include_router(sequences.router)
+api_router.include_router(triggers.router)
+api_router.include_router(metrics.router)
+api_router.include_router(template_sequences.router)
 
 __all__ = ["api_router"]
