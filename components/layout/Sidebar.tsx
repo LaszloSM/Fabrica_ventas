@@ -4,7 +4,7 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, Kanban, Users, FileText, GitBranch,
-  CheckSquare, Zap, Settings, LogOut
+  CheckSquare, Zap, Settings, UserCog
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/sequences',   label: 'Secuencias',   icon: GitBranch },
   { href: '/activities',  label: 'Actividades',  icon: CheckSquare },
   { href: '/triggers',    label: 'Señales',      icon: Zap },
+  { href: '/settings',    label: 'Configuración', icon: Settings },
 ]
 
 export function Sidebar() {
