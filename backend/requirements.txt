@@ -23,8 +23,8 @@ groq==0.4.0
 azure-identity==1.14.0
 
 # Azure
-azure-storage-blob==12.18.3
-azure-storage-queue==12.18.1
+azure-storage-blob==12.19.0
+azure-storage-queue==12.9.0
 
 # Testing
 pytest==7.4.3
