@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth'
 import Google from 'next-auth/providers/google'
 
-const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN || 'coimpactob.com'
+const ALLOWED_DOMAIN = process.env.ALLOWED_EMAIL_DOMAIN || 'coimpactob.org'
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
