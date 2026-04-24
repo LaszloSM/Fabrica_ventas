@@ -1,32 +1,34 @@
-from __future__ import annotations
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from app.config import settings
+import logging
 
-from pathlib import Path
-import os
+logger = logging.getLogger(__name__)
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+client: AsyncIOMotorClient = None
+db: AsyncIOMotorDatabase = None
 
-
-def _default_database_url() -> str:
-    data_dir = Path(__file__).resolve().parents[1] / "data"
-    data_dir.mkdir(parents=True, exist_ok=True)
-    return f"sqlite:///{(data_dir / 'fabrica_ventas.db').as_posix()}"
-
-
-DATABASE_URL = os.getenv("DATABASE_URL", _default_database_url())
-CONNECT_ARGS = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
-
-engine = create_engine(DATABASE_URL, connect_args=CONNECT_ARGS)
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-
-
-class Base(DeclarativeBase):
-    pass
-
-
-def get_db():
-    db = SessionLocal()
+async def connect_to_mongo():
+    global client, db
     try:
-      yield db
-    finally:
-      db.close()
+        if settings.USE_MOCK_DB:
+            from mongomock_motor import AsyncMongoMockClient
+            client = AsyncMongoMockClient()
+            db = client[settings.COSMOS_DATABASE]
+            logger.info("✅ Usando MongoDB en memoria (modo DEV)")
+        else:
+            client = AsyncIOMotorClient(settings.COSMOS_CONNECTION_STRING)
+            db = client[settings.COSMOS_DATABASE]
+            await db.command('ping')
+            logger.info("✅ Conectado a Cosmos DB")
+    except Exception as e:
+        logger.error(f"❌ Error conectando a DB: {e}")
+        raise
+
+async def close_mongo_connection():
+    global client
+    if client:
+        client.close()
+        logger.info("✅ Desconectado de DB")
+
+async def get_db() -> AsyncIOMotorDatabase:
+    return db

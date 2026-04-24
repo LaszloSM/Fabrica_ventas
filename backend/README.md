@@ -1,19 +1,26 @@
-# FastAPI Backend
+# CoimpactoB CRM - Backend API
 
-Desarrollo local:
+Backend completo: FastAPI + MongoDB + Groq AI + Scheduler.
+
+## Quick Start
 
 ```bash
-python -m pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+cp .env.example .env.local
+# Agregar GROQ_API_KEY en .env.local
+docker-compose up  # desde raíz del proyecto
 ```
 
-Variables principales:
+- API: http://localhost:8000
+- Docs: http://localhost:8000/docs
 
-- `DATABASE_URL`: SQLite local por defecto, o PostgreSQL administrado en Azure.
-- `PORT`: puerto usado por contenedor o App Service.
+## Testing
 
-Despliegue sugerido en Azure:
+```bash
+python -m pytest tests/ -v
+```
 
-- Azure Container Apps o Azure App Service for Containers.
-- Base de datos PostgreSQL Flexible Server.
-- `FASTAPI_BACKEND_URL` en el frontend apuntando al dominio publicado del backend.
+## Stack
+
+FastAPI 0.115 · MongoDB/Cosmos DB · Groq AI ($0/mes) · APScheduler · Docker · Azure
+
+Ver docs/DEPLOY.md para deploy a Azure.
