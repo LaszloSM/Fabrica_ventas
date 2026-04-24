@@ -40,3 +40,7 @@ python-json-logger==2.0.7
 
 # Scheduling
 apscheduler==3.10.4
+
+# Reports
+openpyxl==3.1.2
+reportlab==4.2.2

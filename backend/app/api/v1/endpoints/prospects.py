@@ -15,8 +15,8 @@ async def create_prospect(
     prospect_data: ProspectCreate,
     service: ProspectService = Depends(get_prospect_service)
 ):
-    prospect = await service.create_prospect(prospect_data.dict())
-    return {"data": prospect.dict(by_alias=True)}
+    prospect = await service.create_prospect(prospect_data.model_dump())
+    return {"data": prospect.model_dump(by_alias=True)}
 
 @router.get("")
 async def list_prospects(
@@ -27,7 +27,7 @@ async def list_prospects(
     service: ProspectService = Depends(get_prospect_service)
 ):
     prospects, total = await service.list_prospects(skip, limit, search, region)
-    return {"data": [p.dict(by_alias=True) for p in prospects], "total": total}
+    return {"data": [p.model_dump(by_alias=True) for p in prospects], "total": total}
 
 @router.get("/{prospect_id}")
 async def get_prospect(
@@ -37,7 +37,7 @@ async def get_prospect(
     prospect = await service.get_prospect(prospect_id)
     if not prospect:
         raise HTTPException(status_code=404, detail="Prospect no encontrado")
-    return {"data": prospect.dict(by_alias=True)}
+    return {"data": prospect.model_dump(by_alias=True)}
 
 @router.put("/{prospect_id}")
 @router.patch("/{prospect_id}")
@@ -46,11 +46,11 @@ async def update_prospect(
     prospect_update: ProspectUpdate,
     service: ProspectService = Depends(get_prospect_service)
 ):
-    update_data = prospect_update.dict(exclude_unset=True)
+    update_data = prospect_update.model_dump(exclude_unset=True)
     prospect = await service.update_prospect(prospect_id, update_data)
     if not prospect:
         raise HTTPException(status_code=404, detail="Prospect no encontrado")
-    return {"data": prospect.dict(by_alias=True)}
+    return {"data": prospect.model_dump(by_alias=True)}
 
 @router.delete("/{prospect_id}", status_code=204)
 async def delete_prospect(

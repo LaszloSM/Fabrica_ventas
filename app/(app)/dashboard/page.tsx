@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react'
 
+import { FileSpreadsheet, FileText } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { FunnelChart } from '@/components/dashboard/FunnelChart'
 import { GoalProgressCard } from '@/components/dashboard/GoalProgressCard'
 import { QuarterlyGrid } from '@/components/dashboard/QuarterlyGrid'
@@ -9,13 +11,16 @@ import { TeamLeaderboard } from '@/components/dashboard/TeamLeaderboard'
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<any>(null)
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     fetch('/api/metrics')
-      .then((response) => response.json())
+      .then((r) => r.json())
       .then((json) => setMetrics(json.data))
+      .catch(() => setError(true))
   }, [])
 
+  if (error) return <div className="p-6 text-red-600">Error cargando métricas. Verifica que el backend esté corriendo.</div>
   if (!metrics) return <div className="p-6">Cargando metricas...</div>
 
   return (
@@ -47,6 +52,24 @@ export default function DashboardPage() {
       <div className="rounded-xl border bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-lg font-semibold">Avance Trimestral por Servicio</h2>
         <QuarterlyGrid goals={metrics.goals} />
+      </div>
+
+      <div className="rounded-xl border bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-lg font-semibold">Exportar Reportes</h2>
+        <div className="flex gap-3">
+          <a href="/api/reports/pipeline" download>
+            <Button variant="outline" className="flex items-center gap-2 text-green-700 border-green-300">
+              <FileSpreadsheet className="w-4 h-4" />
+              Pipeline Excel
+            </Button>
+          </a>
+          <a href="/api/reports/quarterly?quarter=2&year=2026" download>
+            <Button variant="outline" className="flex items-center gap-2 text-blue-700 border-blue-300">
+              <FileText className="w-4 h-4" />
+              Reporte Q2 2026 PDF
+            </Button>
+          </a>
+        </div>
       </div>
     </div>
   )

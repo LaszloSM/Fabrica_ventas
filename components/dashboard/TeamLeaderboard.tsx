@@ -4,8 +4,9 @@ import { Badge } from '@/components/ui/badge'
 
 interface LeaderboardEntry {
   name: string
-  wonCount: number
-  wonValue: number
+  won: number
+  pipeline: number
+  deals: number
 }
 
 export function TeamLeaderboard({ data }: { data: LeaderboardEntry[] }) {
@@ -16,8 +17,8 @@ export function TeamLeaderboard({ data }: { data: LeaderboardEntry[] }) {
       <TableHeader>
         <TableRow>
           <TableHead>Vendedor</TableHead>
-          <TableHead className="text-right">Deals Ganados</TableHead>
-          <TableHead className="text-right">Valor Total</TableHead>
+          <TableHead className="text-right">Deals Activos</TableHead>
+          <TableHead className="text-right">Pipeline ($)</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -29,8 +30,8 @@ export function TeamLeaderboard({ data }: { data: LeaderboardEntry[] }) {
                 {entry.name}
               </div>
             </TableCell>
-            <TableCell className="text-right">{entry.wonCount}</TableCell>
-            <TableCell className="text-right">${entry.wonValue.toLocaleString()}</TableCell>
+            <TableCell className="text-right">{entry.deals ?? 0}</TableCell>
+            <TableCell className="text-right">${(entry.pipeline ?? 0).toLocaleString()}</TableCell>
           </TableRow>
         ))}
       </TableBody>

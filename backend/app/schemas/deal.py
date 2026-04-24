@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from datetime import datetime
 from typing import Optional
 
@@ -12,19 +12,11 @@ class DealCreate(BaseModel):
     value: Optional[float] = None
     quarter: Optional[int] = None
 
-    # CAMPOS CRÍTICOS (OBLIGATORIOS)
-    problem: str = Field(..., min_length=10, max_length=500)
-    benefit: str = Field(..., min_length=10, max_length=500)
-    nextAction: str = Field(..., min_length=5, max_length=500)
-    nextActionDate: datetime
+    problem: Optional[str] = Field(None, max_length=500)
+    benefit: Optional[str] = Field(None, max_length=500)
+    nextAction: Optional[str] = Field(None, max_length=500)
+    nextActionDate: Optional[datetime] = None
     assignedTo: Optional[str] = None
-
-    @field_validator('nextActionDate')
-    @classmethod
-    def next_action_date_must_be_future(cls, v):
-        if v <= datetime.utcnow():
-            raise ValueError('nextActionDate debe ser en el futuro')
-        return v
 
 class DealUpdate(BaseModel):
     stage: Optional[str] = None

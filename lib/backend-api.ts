@@ -20,7 +20,7 @@ export async function proxyToBackend(req: NextRequest, path: string) {
       'Content-Type': 'application/json',
       'x-user-id': session.user?.id || '',
       'x-user-email': session.user?.email || '',
-      'x-user-role': (session.user as any)?.role || '',
+      'x-user-role': session.user?.role || '',
     },
     body,
     cache: 'no-store',

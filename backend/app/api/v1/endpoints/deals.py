@@ -35,8 +35,8 @@ async def create_deal(
 ):
     user_id = req.headers.get("x-user-id", "user_default")
     try:
-        deal = await service.create_deal(deal_data.dict(), user_id)
-        d = deal.dict(by_alias=True)
+        deal = await service.create_deal(deal_data.model_dump(), user_id)
+        d = deal.model_dump(by_alias=True)
         prospect_svc = ProspectService(db)
         prospect = await prospect_svc.get_prospect(deal.prospectId)
         return {"data": _enrich(d, prospect)}
@@ -57,7 +57,7 @@ async def list_deals(
     prospect_svc = ProspectService(db)
     items = []
     for deal in deals:
-        d = deal.dict(by_alias=True)
+        d = deal.model_dump(by_alias=True)
         prospect = await prospect_svc.get_prospect(deal.prospectId)
         items.append(_enrich(d, prospect))
     return {"data": items, "total": total}
@@ -68,7 +68,7 @@ async def get_aging_deals(
     service: DealService = Depends(get_deal_service)
 ):
     deals = await service.get_aging_deals(days)
-    return {"data": [d.dict(by_alias=True) for d in deals]}
+    return {"data": [d.model_dump(by_alias=True) for d in deals]}
 
 @router.get("/by-owner/{user_id}")
 async def get_deals_by_owner(
@@ -76,7 +76,7 @@ async def get_deals_by_owner(
     service: DealService = Depends(get_deal_service)
 ):
     deals, _ = await service.list_deals(owner=user_id)
-    return {"data": [d.dict(by_alias=True) for d in deals]}
+    return {"data": [d.model_dump(by_alias=True) for d in deals]}
 
 @router.get("/{deal_id}")
 async def get_deal(
@@ -89,7 +89,7 @@ async def get_deal(
         raise HTTPException(status_code=404, detail="Deal no encontrado")
     prospect_svc = ProspectService(db)
     prospect = await prospect_svc.get_prospect(deal.prospectId)
-    return {"data": _enrich(deal.dict(by_alias=True), prospect)}
+    return {"data": _enrich(deal.model_dump(by_alias=True), prospect)}
 
 @router.put("/{deal_id}")
 @router.patch("/{deal_id}")
@@ -100,13 +100,13 @@ async def update_deal(
     service: DealService = Depends(get_deal_service),
     db=Depends(get_db)
 ):
-    update_data = deal_update.dict(exclude_unset=True)
+    update_data = deal_update.model_dump(exclude_unset=True)
     deal = await service.update_deal(deal_id, update_data)
     if not deal:
         raise HTTPException(status_code=404, detail="Deal no encontrado")
     prospect_svc = ProspectService(db)
     prospect = await prospect_svc.get_prospect(deal.prospectId)
-    return {"data": _enrich(deal.dict(by_alias=True), prospect)}
+    return {"data": _enrich(deal.model_dump(by_alias=True), prospect)}
 
 @router.delete("/{deal_id}", status_code=204)
 async def delete_deal(deal_id: str, service: DealService = Depends(get_deal_service)):
@@ -126,14 +126,14 @@ async def move_deal_stage(
     deal = await service.move_to_stage(deal_id, new_stage, user_id)
     if not deal:
         raise HTTPException(status_code=404, detail="Deal no encontrado")
-    return {"data": deal.dict(by_alias=True)}
+    return {"data": deal.model_dump(by_alias=True)}
 
 @router.post("/{deal_id}/mark-won")
 async def mark_deal_won(deal_id: str, service: DealService = Depends(get_deal_service)):
     deal = await service.mark_won(deal_id)
     if not deal:
         raise HTTPException(status_code=404, detail="Deal no encontrado")
-    return {"data": deal.dict(by_alias=True)}
+    return {"data": deal.model_dump(by_alias=True)}
 
 @router.post("/{deal_id}/mark-lost")
 async def mark_deal_lost(
@@ -144,4 +144,4 @@ async def mark_deal_lost(
     deal = await service.mark_lost(deal_id, reason)
     if not deal:
         raise HTTPException(status_code=404, detail="Deal no encontrado")
-    return {"data": deal.dict(by_alias=True)}
+    return {"data": deal.model_dump(by_alias=True)}

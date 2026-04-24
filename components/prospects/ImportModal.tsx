@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 
 interface ImportResult {
@@ -46,14 +46,19 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
   async function handleClear() {
     if (!confirm('¿Eliminar todos los datos importados? Esta acción no se puede deshacer.')) return
     setLoading(true)
-    const res = await fetch('/api/import', { method: 'DELETE' })
-    if (!res.ok) {
-      const json = await res.json()
-      setError(json.detail || 'Error al limpiar datos')
-    } else {
-      setResult(null)
+    try {
+      const res = await fetch('/api/import', { method: 'DELETE' })
+      if (!res.ok) {
+        const json = await res.json()
+        setError(json.detail || 'Error al limpiar datos')
+      } else {
+        setResult(null)
+      }
+    } catch {
+      setError('No se pudo conectar al servidor')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   return (
@@ -61,9 +66,7 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Importar desde Google Sheets</DialogTitle>
-          <DialogDescription>
-            Importa los contactos del sheet de CoimpactoB. Solo funciona si la BD está vacía.
-          </DialogDescription>
+          <p className="text-sm text-gray-500 mt-1">Importa los contactos del sheet de CoimpactoB. Solo funciona si la BD está vacía.</p>
         </DialogHeader>
 
         {result ? (
