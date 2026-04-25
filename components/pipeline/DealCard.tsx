@@ -2,6 +2,7 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { differenceInDays } from 'date-fns'
+import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { DealWithRelations } from '@/types'
@@ -38,6 +39,7 @@ function getTemperature(stage: DealStage) {
 }
 
 export function DealCard({ deal, onClick }: DealCardProps) {
+  const router = useRouter()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: deal.id })
 
   const lastActivity = deal.activities?.[0]
@@ -61,12 +63,32 @@ export function DealCard({ deal, onClick }: DealCardProps) {
         isDragging && 'opacity-50 rotate-2 shadow-xl'
       )}
     >
-      {/* Nombre del prospecto */}
-      <p className="font-medium text-gray-900 text-sm leading-tight">{deal.prospect?.name || 'Sin nombre'}</p>
+      {/* Nombre del prospecto - clickeable para ir a contacto 360 */}
+      <p
+        className="font-medium text-gray-900 text-sm leading-tight hover:text-green-700 cursor-pointer"
+        onClick={(e) => {
+          e.stopPropagation()
+          if (deal.contact?.id) {
+            router.push(`/contacts/${deal.contact.id}`)
+          }
+        }}
+      >
+        {deal.prospect?.name || 'Sin nombre'}
+      </p>
       
       {/* Contacto principal */}
       {deal.contact?.name && deal.contact.name !== deal.prospect?.name && (
-        <p className="text-xs text-gray-500 mt-0.5">{deal.contact.name}</p>
+        <p
+          className="text-xs text-gray-500 mt-0.5 hover:text-green-700 cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation()
+            if (deal.contact?.id) {
+              router.push(`/contacts/${deal.contact.id}`)
+            }
+          }}
+        >
+          {deal.contact.name}
+        </p>
       )}
       
       {/* Badges de servicio y temperatura */}
