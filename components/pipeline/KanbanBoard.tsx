@@ -63,7 +63,6 @@ export function KanbanBoard() {
         setDeals(dealsJson.data || [])
         setTeamMembers(teamJson.data || [])
       } catch (err) {
-        console.error('Error loading pipeline data:', err)
         setError(err instanceof Error ? err.message : 'Error desconocido')
       } finally {
         setLoading(false)
@@ -80,12 +79,22 @@ export function KanbanBoard() {
     const targetStage = over.id as DealStage
     if (!STAGES.find((s) => s.key === targetStage)) return
 
+    const previousDeals = deals
     setDeals((prev) => prev.map((d) => d.id === active.id ? { ...d, stage: targetStage } : d))
-    await fetch(`/api/deals/${active.id}`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ stage: targetStage }),
-    })
+
+    try {
+      const res = await fetch(`/api/deals/${active.id}`, {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ stage: targetStage }),
+      })
+      if (!res.ok) {
+        throw new Error('API error')
+      }
+    } catch {
+      // Revert optimistic update on failure
+      setDeals(previousDeals)
+    }
   }
 
   // Filtrar deals

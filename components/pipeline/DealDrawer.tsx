@@ -38,16 +38,27 @@ export function DealDrawer({ deal, onClose, onUpdate }: DealDrawerProps) {
   async function logActivity(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const res = await fetch('/api/activities', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ dealId: deal.id, ...activity }),
-    })
-    if (res.ok) {
-      setActivity({ type: ActivityType.NOTE, notes: '' })
+    try {
+      const res = await fetch('/api/activities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dealId: deal.id, ...activity }),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        const newActivity = json.data
+        // Update deal activities locally so timeline refreshes immediately
+        onUpdate({
+          ...deal,
+          activities: [...(deal.activities || []), newActivity],
+        })
+        setActivity({ type: ActivityType.NOTE, notes: '' })
+      }
+    } catch {
+      // silently fail — user can retry
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
-    onClose()
   }
 
   const sortedActivities = [...(deal.activities || [])].sort(
