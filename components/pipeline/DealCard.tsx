@@ -5,6 +5,7 @@ import { differenceInDays } from 'date-fns'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 import type { DealWithRelations } from '@/types'
+import { DealStage } from '@/types'
 
 const SERVICE_LABELS: Record<string, string> = {
   CREDIMPACTO_GRUPOS: 'Crédito Grupos',
@@ -24,15 +25,28 @@ interface DealCardProps {
   onClick: () => void
 }
 
+// Determinar temperatura basada en stage
+function getTemperature(stage: DealStage) {
+  const coldStages = ['PROSPECTO_IDENTIFICADO', 'SENAL_DETECTADA', 'PRIMER_CONTACTO']
+  const warmStages = ['EN_SECUENCIA', 'REUNION_AGENDADA']
+  const hotStages = ['PROPUESTA_ENVIADA', 'NEGOCIACION', 'GANADO']
+  
+  if (coldStages.includes(stage)) return { label: 'Frío', color: 'bg-blue-100 text-blue-700 border-blue-200', emoji: '🔵' }
+  if (warmStages.includes(stage)) return { label: 'Tibio', color: 'bg-yellow-100 text-yellow-700 border-yellow-200', emoji: '🟡' }
+  if (hotStages.includes(stage)) return { label: 'Caliente', color: 'bg-red-100 text-red-700 border-red-200', emoji: '🔴' }
+  return { label: 'Perdido', color: 'bg-gray-100 text-gray-600 border-gray-200', emoji: '⚫' }
+}
+
 export function DealCard({ deal, onClick }: DealCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: deal.id })
 
-  const lastActivity = deal.activities[0]
+  const lastActivity = deal.activities?.[0]
   const daysSinceActivity = lastActivity
     ? differenceInDays(new Date(), new Date(lastActivity.doneAt))
     : differenceInDays(new Date(), new Date(deal.createdAt))
 
   const urgencyColor = daysSinceActivity >= 14 ? 'border-l-red-500' : daysSinceActivity >= 7 ? 'border-l-yellow-400' : 'border-l-transparent'
+  const temperature = getTemperature(deal.stage)
 
   return (
     <div
@@ -47,20 +61,53 @@ export function DealCard({ deal, onClick }: DealCardProps) {
         isDragging && 'opacity-50 rotate-2 shadow-xl'
       )}
     >
-      <p className="font-medium text-gray-900 text-sm leading-tight">{deal.prospect.name}</p>
-      <div className="flex items-center justify-between mt-2">
-        <Badge variant="secondary" className="text-xs">{SERVICE_LABELS[deal.serviceType] || deal.serviceType}</Badge>
-        {deal.value && (
-          <span className="text-xs text-gray-500">${(deal.value / 1_000_000).toFixed(0)}M</span>
-        )}
-      </div>
-      {deal.assignedUser && (
-        <p className="text-xs text-gray-400 mt-1">{deal.assignedUser.name}</p>
+      {/* Nombre del prospecto */}
+      <p className="font-medium text-gray-900 text-sm leading-tight">{deal.prospect?.name || 'Sin nombre'}</p>
+      
+      {/* Contacto principal */}
+      {deal.contact?.name && deal.contact.name !== deal.prospect?.name && (
+        <p className="text-xs text-gray-500 mt-0.5">{deal.contact.name}</p>
       )}
+      
+      {/* Badges de servicio y temperatura */}
+      <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+        <Badge variant="secondary" className="text-xs bg-gray-100 text-gray-700">
+          {SERVICE_LABELS[deal.serviceType] || deal.serviceType}
+        </Badge>
+        <Badge className={`text-xs ${temperature.color} border`}>
+          {temperature.emoji} {temperature.label}
+        </Badge>
+      </div>
+      
+      {/* Valor y responsable */}
+      <div className="flex items-center justify-between mt-2">
+        {deal.value ? (
+          <span className="text-xs font-semibold text-gray-700">
+            ${(deal.value / 1_000_000).toFixed(0)}M
+          </span>
+        ) : (
+          <span className="text-xs text-gray-400">Sin valor</span>
+        )}
+        
+        {deal.assignedUser?.name ? (
+          <span className="text-xs text-gray-500 bg-gray-50 rounded px-1.5 py-0.5">
+            {deal.assignedUser.name}
+          </span>
+        ) : deal.assignedTo ? (
+          <span className="text-xs text-gray-500 bg-gray-50 rounded px-1.5 py-0.5">
+            {deal.assignedTo}
+          </span>
+        ) : null}
+      </div>
+      
+      {/* Alerta de inactividad */}
       {daysSinceActivity >= 7 && (
-        <p className={cn('text-xs mt-1 font-medium', daysSinceActivity >= 14 ? 'text-red-500' : 'text-yellow-500')}>
-          {daysSinceActivity}d sin actividad
-        </p>
+        <div className={cn(
+          'flex items-center gap-1 mt-2 text-xs font-medium',
+          daysSinceActivity >= 14 ? 'text-red-600' : 'text-yellow-600'
+        )}>
+          <span>{daysSinceActivity}d sin actividad</span>
+        </div>
       )}
     </div>
   )
