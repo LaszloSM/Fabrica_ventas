@@ -10,7 +10,11 @@ from datetime import datetime
 from typing import Dict, List, Optional, Set, Tuple
 
 # Configuración de fuentes
-DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(__file__)))), "data")
+# En desarrollo: relativo al backend. En producción (contenedor): /app/data
+if os.path.exists("/app/data"):
+    DATA_DIR = "/app/data"
+else:
+    DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
 
 CSV_SOURCES = [
     "Base de datos_contactos - 2026.csv",
