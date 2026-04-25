@@ -1,10 +1,10 @@
 'use client'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
-import { AlertTriangle, CheckCircle, Database, Loader2, Trash2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Database, Loader2, Trash2, Upload } from 'lucide-react'
 
 interface ImportStats {
   prospects: number
@@ -38,6 +38,8 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
   const [dbStatus, setDbStatus] = useState<DbStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [force, setForce] = useState(false)
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function checkStatus() {
     setChecking(true)
@@ -54,12 +56,31 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
     }
   }
 
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files || []).filter(f => f.name.endsWith('.csv'))
+    setSelectedFiles(files)
+    setError(null)
+  }
+
   async function handleImport() {
+    if (selectedFiles.length === 0) {
+      setError('Selecciona al menos un archivo CSV')
+      return
+    }
+
     setLoading(true)
     setError(null)
+    
     try {
+      const formData = new FormData()
+      selectedFiles.forEach(file => formData.append('files', file))
+      
       const url = force ? '/api/import/comprehensive?force=true' : '/api/import/comprehensive'
-      const res = await fetch(url, { method: 'POST' })
+      const res = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      })
+      
       const json = await res.json()
       if (!res.ok) {
         setError(json.detail || json.message || 'Error al importar')
@@ -85,6 +106,7 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
         setError(json.detail || 'Error al limpiar datos')
       } else {
         setResult(null)
+        setSelectedFiles([])
         checkStatus()
       }
     } catch {
@@ -105,7 +127,7 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
             Importar Base de Datos
           </DialogTitle>
           <p className="text-sm text-gray-500 mt-1">
-            Importa los ~1,400 contactos desde los archivos CSV de CoimpactoB.
+            Sube tus archivos CSV de CoimpactoB para importarlos a la base de datos.
           </p>
         </DialogHeader>
 
@@ -187,6 +209,44 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
               </div>
             )}
 
+            {/* Selector de archivos */}
+            <div className="space-y-2">
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept=".csv"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+              <Button
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full h-auto py-4 border-dashed border-2 hover:border-green-400 hover:bg-green-50"
+              >
+                <div className="flex flex-col items-center gap-2">
+                  <Upload className="w-6 h-6 text-gray-400" />
+                  <span className="text-sm text-gray-600">
+                    {selectedFiles.length > 0 
+                      ? `${selectedFiles.length} archivo(s) seleccionado(s)`
+                      : 'Haz clic para seleccionar archivos CSV'
+                    }
+                  </span>
+                </div>
+              </Button>
+              
+              {selectedFiles.length > 0 && (
+                <div className="space-y-1">
+                  {selectedFiles.map((file, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded px-2 py-1">
+                      <Database className="w-3 h-3" />
+                      {file.name} ({(file.size / 1024).toFixed(1)} KB)
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {hasData && (
               <div className="flex items-center gap-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <input
@@ -204,7 +264,7 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
 
             <Button
               onClick={handleImport}
-              disabled={loading}
+              disabled={loading || selectedFiles.length === 0}
               className="w-full bg-green-600 hover:bg-green-700"
             >
               {loading ? (
@@ -213,7 +273,7 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
                   Importando...
                 </>
               ) : (
-                'Importar todos los CSVs'
+                'Importar archivos seleccionados'
               )}
             </Button>
 
@@ -228,10 +288,6 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
                 Limpiar todos los datos
               </Button>
             )}
-
-            <p className="text-xs text-gray-500">
-              Se importarán datos de 6 fuentes: 2026, Banca frío, Banca caliente, CAF, Contactos Airtable y Base 2025.
-            </p>
           </div>
         )}
       </DialogContent>

@@ -1,29 +1,12 @@
 """
-Servicio de importación masiva desde múltiples CSVs.
-Soporta deduplicación, extracción de vendedores y mapeo por fuente.
+Servicio de importación masiva desde múltiples CSVs subidos por upload HTTP.
 """
 import csv
-import os
+import io
 import re
 import uuid
 from datetime import datetime
 from typing import Dict, List, Optional, Set, Tuple
-
-# Configuración de fuentes
-# En desarrollo: relativo al backend. En producción (contenedor): /app/data
-if os.path.exists("/app/data"):
-    DATA_DIR = "/app/data"
-else:
-    DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "data")
-
-CSV_SOURCES = [
-    "Base de datos_contactos - 2026.csv",
-    "Base de datos_contactos - Banca frio.csv",
-    "Base de datos_contactos - Banca caliente.csv",
-    "Base de datos_contactos - CAF.csv",
-    "Base de datos_contactos - Contactos airtable.csv",
-    "Base de datos_contactos - Base de datos 2025.csv",
-]
 
 STAGE_MAP = {
     "frio": "PRIMER_CONTACTO",
@@ -126,7 +109,6 @@ class ImportService:
         unique_names: Set[str] = set()
         
         for row in all_rows:
-            # Diferentes columnas de responsable según la fuente
             responsable = ""
             if "Responsable" in row:
                 responsable = _c(row.get("Responsable", ""))
@@ -167,20 +149,14 @@ class ImportService:
             return self.team_members[responsable]
         return None
     
-    def _read_csv_file(self, filename: str) -> List[Dict]:
-        """Lee un archivo CSV y devuelve lista de diccionarios"""
-        filepath = os.path.join(DATA_DIR, filename)
-        if not os.path.exists(filepath):
-            print(f"Warning: {filepath} no encontrado")
-            return []
-        
+    def _read_csv_content(self, content: str) -> List[Dict]:
+        """Lee contenido CSV desde string y devuelve lista de diccionarios"""
         rows = []
-        with open(filepath, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                # Limpiar claves
-                clean_row = {k.strip(): v for k, v in row.items()}
-                rows.append(clean_row)
+        reader = csv.DictReader(io.StringIO(content))
+        for row in reader:
+            # Limpiar claves
+            clean_row = {k.strip(): v for k, v in row.items()}
+            rows.append(clean_row)
         return rows
     
     async def _create_prospect(self, org: str, sector: str, pais: str, ciudad: str, 
@@ -300,7 +276,6 @@ class ImportService:
             ("Mail de seguimiento", "EMAIL_FOLLOWUP", "Mail de seguimiento"),
             ("Preparación de propuesta ", "PROPOSAL_PREP", "Propuesta preparada"),
             ("Reunión de propuesta ", "MEETING", "Reunión de propuesta"),
-            # Banca frio columns
             ("INVITACIÓN LKD ANDREA", "LINKEDIN_CONNECT", "Invitación LinkedIn enviada (Andrea)"),
             ("INVITACIÓN LKD  DANIEL", "LINKEDIN_CONNECT", "Invitación LinkedIn enviada (Daniel)"),
             ("RESPUESTA LINKED", "LINKEDIN_ACCEPT", "Respuesta LinkedIn"),
@@ -326,8 +301,11 @@ class ImportService:
                     })
                     self.stats["activities"] += 1
     
-    async def import_all(self, force: bool = False) -> Dict:
-        """Ejecuta la importación completa de todos los CSVs"""
+    async def import_from_files(self, file_contents: Dict[str, str], force: bool = False) -> Dict:
+        """
+        Importa datos desde contenidos CSV subidos por HTTP.
+        file_contents: {filename: content_string}
+        """
         # Verificar si ya hay datos
         if not force:
             existing = await self.db["prospects"].count_documents({})
@@ -347,26 +325,32 @@ class ImportService:
         
         # Leer todos los CSVs
         all_rows = []
-        source_map = {}  # row_index -> source_name
+        source_map = {}
         
-        for source_name in CSV_SOURCES:
-            rows = self._read_csv_file(source_name)
+        for filename, content in file_contents.items():
+            rows = self._read_csv_content(content)
             start_idx = len(all_rows)
             all_rows.extend(rows)
             for i in range(start_idx, len(all_rows)):
-                source_map[i] = source_name
-            print(f"Leído {source_name}: {len(rows)} filas")
+                source_map[i] = filename
+            print(f"[Import] Procesado {filename}: {len(rows)} filas")
         
         self.stats["rows_processed"] = len(all_rows)
         
+        if len(all_rows) == 0:
+            return {
+                "error": True,
+                "message": "No se encontraron filas en los archivos CSV. Verifica que los archivos no estén vacíos.",
+            }
+        
         # Paso 1: Extraer y crear team_members
         await self._extract_and_create_team_members(all_rows)
-        print(f"Team members creados: {self.stats['team_members']}")
+        print(f"[Import] Team members creados: {self.stats['team_members']}")
         
         # Paso 2: Procesar cada fila
         for idx, row in enumerate(all_rows):
             source = source_map.get(idx, "unknown")
-            is_archived = "2025" in source  # Datos históricos
+            is_archived = "2025" in source
             
             # Normalizar campos según la fuente
             nombre, org, cargo, sector, pais, ciudad, correo, celular, linkedin = "", "", "", "", "", "", "", "", ""
@@ -426,7 +410,6 @@ class ImportService:
                 estado = "frio"
                 
             elif "Contactos airtable" in source:
-                # Este CSV no tiene headers en la primera fila, necesita mapeo especial
                 values = list(row.values())
                 if len(values) >= 6:
                     nombre = _c(values[0])
