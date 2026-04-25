@@ -2,7 +2,6 @@
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { differenceInDays } from 'date-fns'
-import { useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Clock, AlertCircle } from 'lucide-react'
 import type { DealWithRelations } from '@/types'
@@ -42,7 +41,6 @@ interface DealCardProps {
 }
 
 export function DealCard({ deal, onClick }: DealCardProps) {
-  const router = useRouter()
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: deal.id })
 
   const lastActivity = deal.activities?.[0]
@@ -59,12 +57,13 @@ export function DealCard({ deal, onClick }: DealCardProps) {
   const assignedName = deal.assignedUser?.name || deal.assignedTo || 'Sin asignar'
   const serviceLabel = SERVICE_LABELS[deal.serviceType] || deal.serviceType
 
-  const tempDot: Record<string, string> = {
-    cold: '#60a5fa',
-    warm: '#fbbf24',
-    hot: '#f97316',
-    lost: '#6b7280',
+  const tempConfig: Record<string, { color: string; label: string }> = {
+    cold: { color: '#60a5fa', label: 'Frío' },
+    warm: { color: '#fbbf24', label: 'Tibio' },
+    hot: { color: '#f97316', label: 'Caliente' },
+    lost: { color: '#6b7280', label: 'Perdido' },
   }
+  const tc = tempConfig[temp]
 
   return (
     <div
@@ -74,7 +73,7 @@ export function DealCard({ deal, onClick }: DealCardProps) {
       {...listeners}
       onClick={onClick}
       className={cn(
-        'group relative cursor-pointer select-none rounded-xl border transition-all duration-200',
+        'group relative cursor-pointer select-none rounded-xl border transition-all duration-200 overflow-hidden',
         'bg-white/[0.035] border-white/[0.07]',
         'hover:bg-white/[0.055] hover:border-white/[0.13] hover:-translate-y-0.5',
         'hover:shadow-lg hover:shadow-black/20',
@@ -93,10 +92,10 @@ export function DealCard({ deal, onClick }: DealCardProps) {
 
       <div className="p-3">
         {/* Top: Avatar + name + value */}
-        <div className="flex items-start gap-2.5">
+        <div className="flex items-start gap-2">
           {/* Avatar */}
           <div
-            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white"
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white transition-transform duration-300 group-hover:scale-105"
             style={{ background: 'linear-gradient(135deg, #f26522 0%, #c44e18 100%)', boxShadow: '0 2px 8px rgba(242,101,34,0.25)' }}
           >
             {getInitials(prospectName)}
@@ -104,13 +103,7 @@ export function DealCard({ deal, onClick }: DealCardProps) {
 
           {/* Name + contact */}
           <div className="flex-1 min-w-0">
-            <p
-              className="text-[13px] font-semibold text-white/90 leading-tight truncate group-hover:text-white transition-colors"
-              onClick={(e) => {
-                e.stopPropagation()
-                if (deal.contact?.id) router.push(`/contacts/${deal.contact.id}`)
-              }}
-            >
+            <p className="text-[13px] font-semibold text-white/[0.88] leading-tight truncate group-hover:text-white transition-colors duration-150">
               {prospectName}
             </p>
             {contactName && contactName !== prospectName && (
@@ -133,13 +126,13 @@ export function DealCard({ deal, onClick }: DealCardProps) {
           </span>
           <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none"
             style={{
-              background: `${tempDot[temp]}18`,
-              color: tempDot[temp],
-              border: `1px solid ${tempDot[temp]}30`,
+              background: `${tc.color}18`,
+              color: tc.color,
+              border: `1px solid ${tc.color}30`,
             }}
           >
-            <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: tempDot[temp] }} />
-            {temp === 'cold' ? 'Frío' : temp === 'warm' ? 'Tibio' : temp === 'hot' ? 'Caliente' : 'Perdido'}
+            <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: tc.color }} />
+            {tc.label}
           </span>
         </div>
 

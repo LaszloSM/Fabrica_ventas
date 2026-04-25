@@ -19,36 +19,36 @@ def _enrich(deal_dict: dict, prospect=None, contact=None, assigned_user=None, ac
     if "id" not in out and "_id" in deal_dict:
         out["id"] = deal_dict["_id"]
 
-    # Prospect
+    # Prospect (dict from MongoDB)
     if prospect:
         out["prospect"] = {
-            "id": getattr(prospect, "id", ""),
-            "name": getattr(prospect, "name", ""),
-            "industry": getattr(prospect, "industry", None),
-            "region": getattr(prospect, "region", None),
-            "segment": getattr(prospect, "segment", None),
+            "id": prospect.get("id", prospect.get("_id", "")),
+            "name": prospect.get("name", ""),
+            "industry": prospect.get("industry", None),
+            "region": prospect.get("region", None),
+            "segment": prospect.get("segment", None),
         }
     else:
         out.setdefault("prospect", None)
 
-    # Contact
+    # Contact (dict from MongoDB)
     if contact:
         out["contact"] = {
-            "id": getattr(contact, "id", ""),
-            "name": getattr(contact, "name", ""),
-            "email": getattr(contact, "email", None),
-            "phone": getattr(contact, "phone", None),
-            "role": getattr(contact, "role", None),
+            "id": contact.get("id", contact.get("_id", "")),
+            "name": contact.get("name", ""),
+            "email": contact.get("email", None),
+            "phone": contact.get("phone", None),
+            "role": contact.get("role", None),
         }
     else:
         out.setdefault("contact", None)
 
-    # Assigned user
+    # Assigned user (dict from MongoDB)
     if assigned_user:
         out["assignedUser"] = {
-            "id": getattr(assigned_user, "id", ""),
-            "name": getattr(assigned_user, "name", ""),
-            "email": getattr(assigned_user, "email", None),
+            "id": assigned_user.get("id", assigned_user.get("_id", "")),
+            "name": assigned_user.get("name", ""),
+            "email": assigned_user.get("email", None),
         }
     else:
         out.setdefault("assignedUser", None)
@@ -89,34 +89,32 @@ async def list_deals(
 ):
     deals, total = await service.list_deals(skip, limit, stage, owner, line)
 
-    # Pre-fetch all related data efficiently
+    # Pre-fetch all related data (Cosmos DB doesn't support $in on _id)
+    # Fetch all prospects, contacts, team_members into memory for fast lookup
     prospect_ids = {d.prospectId for d in deals if d.prospectId}
     contact_ids = {d.contactId for d in deals if d.contactId}
     assigned_ids = {d.assignedTo for d in deals if d.assignedTo}
     deal_ids = {d.id for d in deals if d.id}
 
-    # Batch fetch prospects
+    # Fetch ALL prospects and index by _id (Cosmos DB $in on _id is unreliable)
     prospects = {}
-    if prospect_ids:
-        async for doc in db["prospects"].find({"_id": {"$in": list(prospect_ids)}}):
-            doc["id"] = doc["_id"]
-            prospects[doc["_id"]] = doc
+    async for doc in db["prospects"].find({}):
+        doc["id"] = doc["_id"]
+        prospects[doc["_id"]] = doc
 
-    # Batch fetch contacts
+    # Fetch ALL contacts and index by _id
     contacts = {}
-    if contact_ids:
-        async for doc in db["contacts"].find({"_id": {"$in": list(contact_ids)}}):
-            doc["id"] = doc["_id"]
-            contacts[doc["_id"]] = doc
+    async for doc in db["contacts"].find({}):
+        doc["id"] = doc["_id"]
+        contacts[doc["_id"]] = doc
 
-    # Batch fetch team members (assigned users)
+    # Fetch ALL team members and index by _id
     team_members = {}
-    if assigned_ids:
-        async for doc in db["team_members"].find({"_id": {"$in": list(assigned_ids)}}):
-            doc["id"] = doc["_id"]
-            team_members[doc["_id"]] = doc
+    async for doc in db["team_members"].find({}):
+        doc["id"] = doc["_id"]
+        team_members[doc["_id"]] = doc
 
-    # Batch fetch activities (last 5 per deal)
+    # Batch fetch activities (last 5 per deal) - $in on dealId works
     activities_by_deal = {}
     if deal_ids:
         async for doc in db["activities"].find({"dealId": {"$in": list(deal_ids)}}).sort("doneAt", -1).limit(len(deal_ids) * 5):

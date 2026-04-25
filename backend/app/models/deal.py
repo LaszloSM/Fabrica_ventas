@@ -26,8 +26,8 @@ class Deal(BaseModel):
     expectedCloseDate: Optional[datetime] = None
     wonAt: Optional[datetime] = None
     lostReason: Optional[str] = None
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    updatedAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
-class Config:
+    class Config:
         populate_by_name = True

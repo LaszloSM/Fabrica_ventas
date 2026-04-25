@@ -43,11 +43,12 @@ export default function TriggersPage() {
   if (loading) return <div className="p-6 text-center text-white/40">Cargando señales...</div>
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6 flex justify-between items-center">
+    <div className="p-7 max-w-4xl mx-auto">
+      <div className="mb-6 flex justify-between items-end">
         <div>
-          <h1 className="text-2xl font-bold text-white">Señales de Venta</h1>
-          <p className="text-white/50 mt-1">Prospectos calientes con triggers detectados</p>
+          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-[0.08em] mb-1.5">Inteligencia</p>
+          <h1 className="text-[32px] font-normal text-white leading-tight" style={{ fontFamily: 'var(--font-dm-serif), Georgia, serif' }}>Señales</h1>
+          <p className="text-sm text-white/50 mt-1">Prospectos calientes con triggers detectados</p>
         </div>
         <Button onClick={() => setOpen(true)} className="bg-gradient-to-r from-[#f26522] to-[#d5551a] hover:from-[#d5551a] hover:to-[#b54514] text-white border-0">
           <Plus className="w-4 h-4 mr-2" /> Detectar Señal

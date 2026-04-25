@@ -11,10 +11,11 @@ export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme()
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="p-7 max-w-5xl mx-auto">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Configuración</h1>
+          <p className="text-[11px] font-semibold text-white/40 uppercase tracking-[0.08em] mb-1.5">Sistema</p>
+          <h1 className="text-[32px] font-normal text-white leading-tight" style={{ fontFamily: 'var(--font-dm-serif), Georgia, serif' }}>Configuración</h1>
           <p className="text-sm text-white/50 mt-1">Gestiona usuarios, equipo y preferencias</p>
         </div>
         <Button

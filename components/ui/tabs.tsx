@@ -30,7 +30,15 @@ export function Tabs({
 }
 
 export function TabsList({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('inline-flex gap-1 rounded-lg p-1', className)} {...props} />
+  return (
+    <div
+      className={cn(
+        'inline-flex gap-1 rounded-lg p-1 bg-white/[0.04] border border-white/[0.07]',
+        className
+      )}
+      {...props}
+    />
+  )
 }
 
 export function TabsTrigger({
@@ -49,8 +57,10 @@ export function TabsTrigger({
     <button
       type="button"
       className={cn(
-        'rounded-md px-3 py-2 text-sm transition-colors',
-        active ? 'bg-white text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
+        'rounded-md px-3 py-2 text-sm font-medium transition-all duration-150',
+        active
+          ? 'bg-[#f26522]/15 text-[#f26522] shadow-sm'
+          : 'text-white/50 hover:text-white/80 hover:bg-white/[0.04]',
         className
       )}
       onClick={() => context?.setValue(value)}

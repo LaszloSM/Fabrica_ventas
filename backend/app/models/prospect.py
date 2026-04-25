@@ -13,8 +13,8 @@ class Prospect(BaseModel):
     website: Optional[str] = None
     linkedinUrl: Optional[str] = None
     assignedTo: Optional[str] = None
-    createdAt: datetime = Field(default_factory=datetime.utcnow)
-    updatedAt: datetime = Field(default_factory=datetime.utcnow)
+    createdAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
+    updatedAt: Optional[datetime] = Field(default_factory=datetime.utcnow)
 
     class Config:
         populate_by_name = True

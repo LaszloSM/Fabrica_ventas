@@ -24,10 +24,11 @@ export default function TemplatesPage() {
   if (loading) return <div className="p-6 text-center text-white/40">Cargando plantillas...</div>
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-7 max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-white">Librería de Plantillas</h1>
-        <p className="text-white/50 mt-1">Mensajes validados del Manual de Jugadas Maestras</p>
+        <p className="text-[11px] font-semibold text-white/40 uppercase tracking-[0.08em] mb-1.5">Biblioteca</p>
+        <h1 className="text-[32px] font-normal text-white leading-tight" style={{ fontFamily: 'var(--font-dm-serif), Georgia, serif' }}>Librería de Plantillas</h1>
+        <p className="text-sm text-white/50 mt-1">Mensajes validados del Manual de Jugadas Maestras</p>
       </div>
 
       <Tabs defaultValue="EMAIL_COLD" className="space-y-6">
