@@ -1,5 +1,4 @@
 'use client'
-import { colors } from '@/lib/design-system'
 
 interface CircularProgressProps {
   percent: number
@@ -12,7 +11,7 @@ export function CircularProgress({
   percent,
   size = 48,
   strokeWidth = 4,
-  color = colors.primary,
+  color = '#f26522',
 }: CircularProgressProps) {
   const radius = (size - strokeWidth) / 2
   const circumference = radius * 2 * Math.PI
@@ -26,7 +25,7 @@ export function CircularProgress({
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke={colors.borderSubtle}
+          stroke="rgba(255,255,255,0.1)"
           strokeWidth={strokeWidth}
         />
         <circle
@@ -42,7 +41,7 @@ export function CircularProgress({
           className="transition-all duration-700 ease-out"
         />
       </svg>
-      <span className="absolute text-[10px] font-bold text-[#1E293B]">{Math.round(percent)}%</span>
+      <span className="absolute text-[10px] font-bold text-white">{Math.round(percent)}%</span>
     </div>
   )
 }

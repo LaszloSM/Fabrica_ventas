@@ -13,7 +13,6 @@ import { TeamLeaderboard } from '@/components/dashboard/TeamLeaderboard'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { RecentActivity } from '@/components/dashboard/RecentActivity'
 import { UrgentActions } from '@/components/dashboard/UrgentActions'
-import { colors, shadows } from '@/lib/design-system'
 
 export default function DashboardPage() {
   const [metrics, setMetrics] = useState<any>(null)
@@ -29,10 +28,10 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center">
-          <AlertTriangle className="mx-auto h-8 w-8 text-red-500 mb-2" />
-          <p className="text-red-700 font-medium">Error cargando métricas</p>
-          <p className="text-sm text-red-600 mt-1">Verifica que el backend esté corriendo</p>
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-center backdrop-blur-sm">
+          <AlertTriangle className="mx-auto h-8 w-8 text-red-400 mb-2" />
+          <p className="text-red-400 font-medium">Error cargando métricas</p>
+          <p className="text-sm text-red-300/60 mt-1">Verifica que el backend esté corriendo</p>
         </div>
       </div>
     )
@@ -41,7 +40,7 @@ export default function DashboardPage() {
   if (!metrics) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <div className="flex items-center gap-3 text-[#64748B]">
+        <div className="flex items-center gap-3 text-white/40">
           <Activity className="h-5 w-5 animate-spin" />
           <span className="text-sm font-medium">Cargando métricas...</span>
         </div>
@@ -63,14 +62,14 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1E293B]">Dashboard</h1>
-          <p className="mt-1 text-sm text-[#64748B]">Estado actual de la estrategia de ventas</p>
+          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
+          <p className="mt-1 text-sm text-white/50">Estado actual de la estrategia de ventas</p>
         </div>
         <div className="flex gap-2">
           <a href="/api/reports/pipeline" download>
             <Button
               variant="outline"
-              className="flex items-center gap-2 text-[#1A7A4A] border-[#1A7A4A]/30 hover:bg-[#1A7A4A]/5"
+              className="flex items-center gap-2 text-emerald-400 border-emerald-400/30 bg-white/5 hover:bg-emerald-400/10 hover:text-emerald-300"
             >
               <FileSpreadsheet className="w-4 h-4" />
               Pipeline Excel
@@ -79,7 +78,7 @@ export default function DashboardPage() {
           <a href="/api/reports/quarterly?quarter=2&year=2026" download>
             <Button
               variant="outline"
-              className="flex items-center gap-2 text-[#2563EB] border-[#2563EB]/30 hover:bg-[#2563EB]/5"
+              className="flex items-center gap-2 text-blue-400 border-blue-400/30 bg-white/5 hover:bg-blue-400/10 hover:text-blue-300"
             >
               <FileText className="w-4 h-4" />
               Reporte Q2
@@ -125,22 +124,19 @@ export default function DashboardPage() {
       </div>
 
       {/* Pipeline Progress */}
-      <div
-        className="rounded-xl border border-[#E2E8F0] bg-white p-5"
-        style={{ boxShadow: shadows.card }}
-      >
+      <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-5">
         <div className="flex items-center justify-between mb-2">
           <div>
-            <h2 className="text-sm font-semibold text-[#1E293B]">Progreso hacia meta anual</h2>
-            <p className="text-xs text-[#94A3B8]">
+            <h2 className="text-sm font-semibold text-white">Progreso hacia meta anual</h2>
+            <p className="text-xs text-white/40">
               ${(summary.totalPipeline / 1_000_000).toFixed(1)}M de ${(totalGoalsTarget / 1_000_000).toFixed(1)}M
             </p>
           </div>
-          <span className="text-sm font-bold text-[#F26522]">{Math.round(pipelinePercent)}%</span>
+          <span className="text-sm font-bold text-[#f26522]">{Math.round(pipelinePercent)}%</span>
         </div>
-        <div className="h-3 w-full overflow-hidden rounded-full bg-[#F1F5F9]">
+        <div className="h-3 w-full overflow-hidden rounded-full bg-white/10">
           <div
-            className="h-full rounded-full bg-[#F26522] transition-all duration-700"
+            className="h-full rounded-full bg-gradient-to-r from-[#f26522] to-[#d5551a] transition-all duration-700"
             style={{ width: `${Math.min(pipelinePercent, 100)}%` }}
           />
         </div>
@@ -148,7 +144,7 @@ export default function DashboardPage() {
 
       {/* Goals Grid */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-[#1E293B]">Metas del Trimestre</h2>
+        <h2 className="mb-4 text-lg font-semibold text-white">Metas del Trimestre</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {metrics.goals.map((goal: any) => (
             <GoalProgressCard key={goal.id} goal={goal} />
@@ -158,47 +154,32 @@ export default function DashboardPage() {
 
       {/* Middle section: Funnel + Leaderboard + Activity */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div
-          className="rounded-xl border border-[#E2E8F0] bg-white p-6"
-          style={{ boxShadow: shadows.card }}
-        >
-          <h2 className="mb-4 text-lg font-semibold text-[#1E293B]">Embudo de Conversión</h2>
+        <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">Embudo de Conversión</h2>
           <FunnelChart data={metrics.funnel} />
         </div>
 
-        <div
-          className="rounded-xl border border-[#E2E8F0] bg-white p-6"
-          style={{ boxShadow: shadows.card }}
-        >
-          <h2 className="mb-4 text-lg font-semibold text-[#1E293B]">Ranking del Equipo</h2>
+        <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
+          <h2 className="mb-4 text-lg font-semibold text-white">Ranking del Equipo</h2>
           <TeamLeaderboard data={metrics.leaderboard} />
         </div>
 
         <div className="space-y-6">
-          <div
-            className="rounded-xl border border-[#E2E8F0] bg-white p-6"
-            style={{ boxShadow: shadows.card }}
-          >
-            <h2 className="mb-4 text-lg font-semibold text-[#1E293B]">Próximas Acciones Urgentes</h2>
+          <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white">Próximas Acciones Urgentes</h2>
             <UrgentActions />
           </div>
 
-          <div
-            className="rounded-xl border border-[#E2E8F0] bg-white p-6"
-            style={{ boxShadow: shadows.card }}
-          >
-            <h2 className="mb-4 text-lg font-semibold text-[#1E293B]">Actividad Reciente</h2>
+          <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white">Actividad Reciente</h2>
             <RecentActivity />
           </div>
         </div>
       </div>
 
       {/* Quarterly Grid */}
-      <div
-        className="rounded-xl border border-[#E2E8F0] bg-white p-6"
-        style={{ boxShadow: shadows.card }}
-      >
-        <h2 className="mb-4 text-lg font-semibold text-[#1E293B]">Avance Trimestral por Servicio</h2>
+      <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
+        <h2 className="mb-4 text-lg font-semibold text-white">Avance Trimestral por Servicio</h2>
         <QuarterlyGrid goals={metrics.goals} />
       </div>
     </div>

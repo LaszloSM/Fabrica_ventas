@@ -1,9 +1,8 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar, AlertCircle, CheckCircle } from 'lucide-react'
 import { ActivityForm } from './ActivityForm'
 
@@ -13,8 +12,6 @@ export function TodayQueue() {
 
   useEffect(() => {
     async function loadQueue() {
-      // In a real app, we'd have a specialized endpoint for the queue.
-      // For now, let's mock some tasks based on sequences and overdue deals.
       const res = await fetch('/api/sequences')
       const json = await res.json()
       const sequences = json.data || []
@@ -42,49 +39,49 @@ export function TodayQueue() {
     loadQueue()
   }, [])
 
-  if (loading) return <div className="text-center py-8 text-gray-400">Cargando cola de hoy...</div>
+  if (loading) return <div className="text-center py-8 text-white/40">Cargando cola de hoy...</div>
 
   return (
     <div className="space-y-6">
       <section>
         <div className="flex items-center gap-2 mb-4">
-          <Calendar className="w-5 h-5 text-green-600" />
-          <h2 className="text-lg font-semibold">Tareas de Hoy</h2>
+          <Calendar className="w-5 h-5 text-emerald-400" />
+          <h2 className="text-lg font-semibold text-white">Tareas de Hoy</h2>
         </div>
 
         {tasks.length === 0 ? (
-          <div className="bg-gray-50 border border-dashed rounded-xl p-8 text-center text-gray-400">
-            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-            <p>¡Estás al día! No hay tareas pendientes para hoy.</p>
+          <div className="rounded-xl border border-dashed border-white/10 bg-white/5 p-8 text-center">
+            <CheckCircle className="w-8 h-8 mx-auto mb-2 text-white/10" />
+            <p className="text-sm text-white/40">¡Estás al día! No hay tareas pendientes para hoy.</p>
           </div>
         ) : (
           <div className="grid gap-3">
             {tasks.map((task) => (
-              <Card key={task.id} className="p-3 flex items-center justify-between">
+              <div key={task.id} className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-3 transition-all hover:border-white/20 hover:bg-white/[0.07]">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+                  <div className="p-2 bg-amber-500/20 rounded-lg text-amber-400">
                     <AlertCircle className="w-4 h-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium">{task.name}</p>
+                    <p className="text-sm font-medium text-white">{task.name}</p>
                     <div className="flex items-center gap-2">
-                      <Badge variant="secondary" className="text-[10px]">{task.type}</Badge>
-                      <span className="text-[10px] text-gray-400">{task.isSequence ? 'Secuencia' : 'Seguimiento'}</span>
+                      <Badge variant="secondary" className="text-[10px] bg-white/10 text-white/50 border-0">{task.type}</Badge>
+                      <span className="text-[10px] text-white/30">{task.isSequence ? 'Secuencia' : 'Seguimiento'}</span>
                     </div>
                   </div>
                 </div>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button size="sm" variant="outline" className="text-xs">Registrar</Button>
+                    <Button size="sm" variant="outline" className="text-xs border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white">Registrar</Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-80">
+                  <PopoverContent className="w-80 bg-[#1a1a2e] border-white/10">
                     <ActivityForm 
                       prospectId={task.prospectId} 
                       onSuccess={() => {}} 
                     />
                   </PopoverContent>
                 </Popover>
-              </Card>
+              </div>
             ))}
           </div>
         )}

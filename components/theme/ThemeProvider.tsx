@@ -12,18 +12,16 @@ interface ThemeContextValue {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined)
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('light')
+  const [theme, setThemeState] = useState<Theme>('dark')
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
+    document.documentElement.classList.add('dark')
     const stored = localStorage.getItem('coimpactob-theme') as Theme | null
     if (stored) {
       setThemeState(stored)
       document.documentElement.classList.toggle('dark', stored === 'dark')
-    } else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      setThemeState('dark')
-      document.documentElement.classList.add('dark')
     }
   }, [])
 

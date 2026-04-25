@@ -36,12 +36,12 @@ export function ActivityForm({ dealId, prospectId, onSuccess }: ActivityFormProp
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <Label className="text-xs">Tipo</Label>
+        <Label className="text-xs text-white/60">Tipo</Label>
         <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v as ActivityType })}>
-          <SelectTrigger className="h-8 text-xs">
+          <SelectTrigger className="h-8 text-xs border-white/10 bg-white/5 text-white">
             <SelectValue placeholder="Seleccionar..." />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-[#1a1a2e] border-white/10">
             <SelectItem value={ActivityType.NOTE}>Nota</SelectItem>
             <SelectItem value={ActivityType.EMAIL}>Email</SelectItem>
             <SelectItem value={ActivityType.CALL}>Llamada</SelectItem>
@@ -51,15 +51,15 @@ export function ActivityForm({ dealId, prospectId, onSuccess }: ActivityFormProp
         </Select>
       </div>
       <div>
-        <Label className="text-xs">Notas</Label>
+        <Label className="text-xs text-white/60">Notas</Label>
         <Textarea 
-          className="text-xs" 
+          className="text-xs border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:ring-[#f26522]/50" 
           rows={3} 
           value={form.notes} 
           onChange={e => setForm({...form, notes: e.target.value})} 
         />
       </div>
-      <Button type="submit" disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-xs">
+      <Button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-[#f26522] to-[#d5551a] hover:from-[#d5551a] hover:to-[#b54514] text-white border-0 text-xs">
         {loading ? 'Guardando...' : 'Registrar Actividad'}
       </Button>
     </form>

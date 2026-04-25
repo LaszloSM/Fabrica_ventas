@@ -36,32 +36,32 @@ export function VariablePreview({ template, open, onClose }: VariablePreviewProp
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{template.name}</DialogTitle></DialogHeader>
-        <div className="grid grid-cols-2 gap-6">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto bg-[#1a1a2e]/95 border-white/10 backdrop-blur-xl">
+        <DialogHeader><DialogTitle className="text-white">{template.name}</DialogTitle></DialogHeader>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h4 className="text-sm font-semibold mb-3 text-gray-700">Variables</h4>
+            <h4 className="text-sm font-semibold mb-3 text-white/60">Variables</h4>
             <div className="space-y-3">
               {variables.map((v) => (
                 <div key={v}>
-                  <Label className="text-xs text-gray-500">{`{{${v}}}`}</Label>
+                  <Label className="text-xs text-white/40">{`{{${v}}}`}</Label>
                   <Input
                     value={values[v] || ''}
                     onChange={(e) => setValues({ ...values, [v]: e.target.value })}
                     placeholder={v}
-                    className="mt-1 text-sm"
+                    className="mt-1 text-sm border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:ring-[#f26522]/50"
                   />
                 </div>
               ))}
-              {variables.length === 0 && <p className="text-sm text-gray-400">Sin variables</p>}
+              {variables.length === 0 && <p className="text-sm text-white/30">Sin variables</p>}
             </div>
           </div>
           <div>
-            <h4 className="text-sm font-semibold mb-3 text-gray-700">Vista previa</h4>
-            <div className="bg-gray-50 rounded-lg p-3 text-sm whitespace-pre-wrap min-h-[200px] border">
+            <h4 className="text-sm font-semibold mb-3 text-white/60">Vista previa</h4>
+            <div className="bg-white/5 rounded-xl p-3 text-sm whitespace-pre-wrap min-h-[200px] border border-white/10 text-white/70">
               {preview}
             </div>
-            <Button onClick={handleCopy} className="w-full mt-3" variant="outline">
+            <Button onClick={handleCopy} variant="outline" className="w-full mt-3 border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white">
               {copied ? <><Check className="w-4 h-4 mr-2" />¡Copiado!</> : <><Copy className="w-4 h-4 mr-2" />Copiar mensaje</>}
             </Button>
           </div>

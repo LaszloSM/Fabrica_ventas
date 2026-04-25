@@ -6,7 +6,6 @@ import { TeamSettings } from '@/components/settings/TeamSettings'
 import { UserSettings } from '@/components/settings/UserSettings'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { Button } from '@/components/ui/button'
-import { colors, shadows } from '@/lib/design-system'
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme()
@@ -15,22 +14,22 @@ export default function SettingsPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#1E293B]">Configuración</h1>
-          <p className="text-sm text-[#64748B] mt-1">Gestiona usuarios, equipo y preferencias</p>
+          <h1 className="text-2xl font-bold text-white">Configuración</h1>
+          <p className="text-sm text-white/50 mt-1">Gestiona usuarios, equipo y preferencias</p>
         </div>
         <Button
           variant="outline"
           onClick={toggleTheme}
-          className="flex items-center gap-2 text-[#64748B] border-[#E2E8F0] hover:bg-[#F8FAFC]"
+          className="flex items-center gap-2 text-white/60 border-white/10 bg-white/5 hover:bg-white/10 hover:text-white"
         >
           {theme === 'dark' ? (
             <>
-              <Sun className="w-4 h-4 text-[#F26522]" />
+              <Sun className="w-4 h-4 text-[#f26522]" />
               Modo claro
             </>
           ) : (
             <>
-              <Moon className="w-4 h-4 text-[#64748B]" />
+              <Moon className="w-4 h-4 text-white/60" />
               Modo oscuro
             </>
           )}
@@ -38,17 +37,17 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="team" className="space-y-6">
-        <TabsList className="bg-[#F8FAFC] border border-[#E2E8F0]">
+        <TabsList className="bg-white/5 border border-white/10 p-1">
           <TabsTrigger
             value="team"
-            className="flex items-center gap-2 text-xs data-[state=active]:bg-white data-[state=active]:text-[#F26522]"
+            className="flex items-center gap-2 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-[#f26522] text-white/50 rounded-lg transition-all"
           >
             <Briefcase className="w-4 h-4" />
             Equipo de Ventas
           </TabsTrigger>
           <TabsTrigger
             value="users"
-            className="flex items-center gap-2 text-xs data-[state=active]:bg-white data-[state=active]:text-[#F26522]"
+            className="flex items-center gap-2 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-[#f26522] text-white/50 rounded-lg transition-all"
           >
             <Users className="w-4 h-4" />
             Usuarios del Sistema
@@ -56,19 +55,13 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="team">
-          <div
-            className="rounded-xl border border-[#E2E8F0] bg-white p-6"
-            style={{ boxShadow: shadows.card }}
-          >
+          <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
             <TeamSettings />
           </div>
         </TabsContent>
 
         <TabsContent value="users">
-          <div
-            className="rounded-xl border border-[#E2E8F0] bg-white p-6"
-            style={{ boxShadow: shadows.card }}
-          >
+          <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
             <UserSettings />
           </div>
         </TabsContent>

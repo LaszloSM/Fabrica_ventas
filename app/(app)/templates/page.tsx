@@ -21,21 +21,21 @@ export default function TemplatesPage() {
     return templates.filter((t) => t.type === type)
   }
 
-  if (loading) return <div className="p-6 text-center text-gray-400">Cargando plantillas...</div>
+  if (loading) return <div className="p-6 text-center text-white/40">Cargando plantillas...</div>
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Librería de Plantillas</h1>
-        <p className="text-gray-500 mt-1">Mensajes validados del Manual de Jugadas Maestras</p>
+        <h1 className="text-2xl font-bold text-white">Librería de Plantillas</h1>
+        <p className="text-white/50 mt-1">Mensajes validados del Manual de Jugadas Maestras</p>
       </div>
 
       <Tabs defaultValue="EMAIL_COLD" className="space-y-6">
-        <TabsList className="bg-gray-100 p-1">
-          <TabsTrigger value="EMAIL_COLD">Email Frío</TabsTrigger>
-          <TabsTrigger value="EMAIL_FOLLOWUP">Seguimiento</TabsTrigger>
-          <TabsTrigger value="LINKEDIN">LinkedIn</TabsTrigger>
-          <TabsTrigger value="CALL">Llamada / Voz</TabsTrigger>
+        <TabsList className="bg-white/5 border border-white/10 p-1">
+          <TabsTrigger value="EMAIL_COLD" className="text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-[#f26522]">Email Frío</TabsTrigger>
+          <TabsTrigger value="EMAIL_FOLLOWUP" className="text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-[#f26522]">Seguimiento</TabsTrigger>
+          <TabsTrigger value="LINKEDIN" className="text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-[#f26522]">LinkedIn</TabsTrigger>
+          <TabsTrigger value="CALL" className="text-white/50 data-[state=active]:bg-white/10 data-[state=active]:text-[#f26522]">Llamada / Voz</TabsTrigger>
         </TabsList>
 
         <TabsContent value="EMAIL_COLD" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

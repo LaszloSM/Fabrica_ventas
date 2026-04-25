@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { Flame, ArrowRight } from 'lucide-react'
-import { colors, shadows } from '@/lib/design-system'
 import type { DealWithRelations } from '@/types'
 
 const HOT_STAGES = ['PROPUESTA_ENVIADA', 'NEGOCIACION', 'REUNION_AGENDADA']
@@ -26,14 +25,19 @@ export function UrgentActions() {
     return (
       <div className="space-y-3">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="h-14 animate-pulse rounded-lg bg-[#F1F5F9]" />
+          <div key={i} className="h-14 animate-pulse rounded-xl bg-white/5" />
         ))}
       </div>
     )
   }
 
   if (deals.length === 0) {
-    return <p className="text-sm text-[#94A3B8]">No hay acciones urgentes pendientes</p>
+    return (
+      <div className="text-center py-6">
+        <Flame className="mx-auto h-8 w-8 text-white/10 mb-2" />
+        <p className="text-sm text-white/40">No hay acciones urgentes pendientes</p>
+      </div>
+    )
   }
 
   return (
@@ -42,30 +46,26 @@ export function UrgentActions() {
         <a
           key={deal.id}
           href={`/pipeline?deal=${deal.id}`}
-          className="flex items-center gap-3 rounded-lg border border-[#E2E8F0] bg-white p-3 transition-all hover:shadow-sm hover:border-[#F26522]/30"
-          style={{ boxShadow: shadows.sm }}
+          className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-3 transition-all hover:border-[#f26522]/30 hover:bg-white/[0.07] group"
         >
-          <div
-            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.hotLight }}
-          >
-            <Flame className="h-4 w-4" style={{ color: colors.hot }} />
+          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[#f26522]/15">
+            <Flame className="h-4 w-4 text-[#f26522]" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-[#1E293B] truncate">
+            <p className="text-sm font-medium text-white truncate group-hover:text-[#f26522] transition-colors">
               {deal.prospect?.name || 'Sin prospecto'}
             </p>
-            <p className="text-xs text-[#64748B]">
+            <p className="text-xs text-white/40">
               {deal.serviceType?.replace(/_/g, ' ')} · {deal.stage.replace(/_/g, ' ')}
             </p>
           </div>
-          <div className="text-right">
+          <div className="text-right flex-shrink-0">
             {deal.value && (
-              <p className="text-sm font-semibold text-[#1A7A4A]">
+              <p className="text-sm font-semibold text-emerald-400">
                 ${(deal.value / 1_000_000).toFixed(1)}M
               </p>
             )}
-            <ArrowRight className="h-4 w-4 text-[#94A3B8] ml-auto mt-0.5" />
+            <ArrowRight className="h-4 w-4 text-white/30 ml-auto mt-0.5 group-hover:text-[#f26522] transition-colors" />
           </div>
         </a>
       ))}

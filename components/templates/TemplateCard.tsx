@@ -1,5 +1,4 @@
 'use client'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Mail, Phone, Send, Volume2 } from 'lucide-react'
@@ -21,25 +20,21 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 
 export function TemplateCard({ template, onPreview }: TemplateCardProps) {
   return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="p-4 pb-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-gray-500">
-            {ICON_MAP[template.type] || <Mail className="w-4 h-4" />}
-            <span className="text-xs font-medium uppercase">{template.type.replace('_', ' ')}</span>
-          </div>
-          {template.segment && <Badge variant="secondary" className="text-[10px]">{template.segment}</Badge>}
+    <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 transition-all hover:border-white/20 hover:bg-white/[0.07] hover:-translate-y-0.5 group">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2 text-white/40">
+          {ICON_MAP[template.type] || <Mail className="w-4 h-4" />}
+          <span className="text-xs font-medium uppercase">{template.type.replace('_', ' ')}</span>
         </div>
-        <CardTitle className="text-base mt-2">{template.name}</CardTitle>
-      </CardHeader>
-      <CardContent className="p-4 pt-0">
-        <p className="text-sm text-gray-600 line-clamp-3 italic mb-4">
-          {template.body}
-        </p>
-        <Button onClick={() => onPreview(template)} variant="outline" className="w-full text-xs">
-          Previsualizar
-        </Button>
-      </CardContent>
-    </Card>
+        {template.segment && <Badge variant="secondary" className="text-[10px] bg-white/10 text-white/50 border-0">{template.segment}</Badge>}
+      </div>
+      <h3 className="text-base font-semibold text-white mb-2 group-hover:text-[#f26522] transition-colors">{template.name}</h3>
+      <p className="text-sm text-white/50 line-clamp-3 italic mb-4">
+        {template.body}
+      </p>
+      <Button onClick={() => onPreview(template)} variant="outline" className="w-full text-xs border-white/10 bg-white/5 text-white/70 hover:bg-white/10 hover:text-white">
+        Previsualizar
+      </Button>
+    </div>
   )
 }

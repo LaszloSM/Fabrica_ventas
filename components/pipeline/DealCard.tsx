@@ -5,7 +5,6 @@ import { differenceInDays } from 'date-fns'
 import { useRouter } from 'next/navigation'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-import { colors } from '@/lib/design-system'
 import type { DealWithRelations } from '@/types'
 import { DealStage } from '@/types'
 
@@ -22,37 +21,33 @@ const SERVICE_LABELS: Record<string, string> = {
   FUNDACION_EXPERIENCIA: 'Experiencia',
 }
 
-function getInitials(name?: string | null) {
-  if (!name) return '?'
-  return name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
+const TEMPERATURE_CONFIG: Record<string, { label: string; gradient: string; glow: string }> = {
+  cold: { label: 'Frío', gradient: 'from-blue-500/20 to-cyan-400/10', glow: 'shadow-blue-500/30' },
+  warm: { label: 'Tibio', gradient: 'from-amber-500/20 to-yellow-400/10', glow: 'shadow-amber-500/30' },
+  hot: { label: 'Caliente', gradient: 'from-red-500/20 to-orange-400/10', glow: 'shadow-red-500/30' },
+  lost: { label: 'Perdido', gradient: 'from-gray-500/20 to-gray-400/10', glow: 'shadow-gray-500/20' },
 }
 
-function getTemperature(stage: DealStage) {
+function getInitials(name?: string | null) {
+  if (!name) return '?'
+  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function getTemperature(stage: DealStage): keyof typeof TEMPERATURE_CONFIG {
   const coldStages = ['PROSPECTO_IDENTIFICADO', 'SENAL_DETECTADA', 'PRIMER_CONTACTO']
   const warmStages = ['EN_SECUENCIA', 'REUNION_AGENDADA']
   const hotStages = ['PROPUESTA_ENVIADA', 'NEGOCIACION', 'GANADO']
 
-  if (coldStages.includes(stage)) {
-    return { label: 'Frío', bg: colors.coldLight, text: colors.cold, dot: colors.cold }
-  }
-  if (warmStages.includes(stage)) {
-    return { label: 'Tibio', bg: colors.warmLight, text: colors.warm, dot: colors.warm }
-  }
-  if (hotStages.includes(stage)) {
-    return { label: 'Caliente', bg: colors.hotLight, text: colors.hot, dot: colors.hot }
-  }
-  return { label: 'Perdido', bg: '#F3F4F6', text: '#6B7280', dot: '#6B7280' }
+  if (coldStages.includes(stage)) return 'cold'
+  if (warmStages.includes(stage)) return 'warm'
+  if (hotStages.includes(stage)) return 'hot'
+  return 'lost'
 }
 
 function getActivityUrgency(days: number) {
-  if (days >= 14) return { color: colors.danger, label: `${days}d`, width: '100%' }
-  if (days >= 7) return { color: colors.warning, label: `${days}d`, width: '66%' }
-  if (days >= 3) return { color: colors.primary, label: `${days}d`, width: '33%' }
+  if (days >= 14) return { color: '#ef4444', label: `${days}d`, width: '100%', pulse: true }
+  if (days >= 7) return { color: '#f59e0b', label: `${days}d`, width: '66%', pulse: false }
+  if (days >= 3) return { color: '#f26522', label: `${days}d`, width: '33%', pulse: false }
   return null
 }
 
@@ -70,9 +65,12 @@ export function DealCard({ deal, onClick }: DealCardProps) {
     ? differenceInDays(new Date(), new Date(lastActivity.doneAt))
     : differenceInDays(new Date(), new Date(deal.createdAt))
 
-  const temperature = getTemperature(deal.stage)
+  const tempKey = getTemperature(deal.stage)
+  const temp = TEMPERATURE_CONFIG[tempKey]
   const urgency = getActivityUrgency(daysSinceActivity)
 
+  const prospectName = deal.prospect?.name || 'Sin organización'
+  const contactName = deal.contact?.name
   const assignedName = deal.assignedUser?.name || deal.assignedTo || 'Sin asignar'
 
   return (
@@ -83,92 +81,87 @@ export function DealCard({ deal, onClick }: DealCardProps) {
       {...listeners}
       onClick={onClick}
       className={cn(
-        'group relative bg-white rounded-xl border border-[#E2E8F0] p-3.5 cursor-pointer select-none transition-all',
-        'hover:shadow-md hover:-translate-y-0.5',
-        isDragging && 'opacity-60 rotate-2 shadow-xl scale-105'
+        'group relative cursor-pointer select-none transition-all duration-300',
+        'rounded-xl border border-white/10 p-3.5',
+        'bg-gradient-to-br ' + temp.gradient,
+        'backdrop-blur-md',
+        'hover:shadow-lg hover:shadow-' + temp.glow + ' hover:-translate-y-1 hover:border-white/20',
+        'active:scale-[0.98]',
+        isDragging && 'opacity-70 rotate-2 scale-105 shadow-2xl z-50'
       )}
     >
+      {/* Glow border effect */}
+      <div className={cn(
+        'absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500',
+        'bg-gradient-to-r ' + temp.gradient
+      )} style={{ filter: 'blur(8px)', zIndex: -1 }} />
+
       {/* Top row: Avatar + Name + Value */}
-      <div className="flex items-start gap-2.5">
-        <div
-          className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white"
-          style={{ backgroundColor: colors.primary }}
-        >
-          {getInitials(deal.prospect?.name)}
+      <div className="flex items-start gap-2.5 relative z-10">
+        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f26522] to-[#d5551a] text-[10px] font-bold text-white shadow-lg shadow-orange-500/30">
+          {getInitials(prospectName)}
         </div>
         <div className="flex-1 min-w-0">
           <p
-            className="text-sm font-semibold text-[#1E293B] leading-tight truncate group-hover:text-[#F26522] transition-colors"
+            className="text-sm font-semibold text-white leading-tight truncate group-hover:text-[#f26522] transition-colors"
             onClick={(e) => {
               e.stopPropagation()
-              if (deal.contact?.id) {
-                router.push(`/contacts/${deal.contact.id}`)
-              }
+              if (deal.contact?.id) router.push(`/contacts/${deal.contact.id}`)
             }}
           >
-            {deal.prospect?.name || 'Sin nombre'}
+            {prospectName}
           </p>
-          {deal.contact?.name && deal.contact.name !== deal.prospect?.name && (
-            <p
-              className="text-[11px] text-[#94A3B8] truncate mt-0.5 hover:text-[#64748B] cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation()
-                if (deal.contact?.id) {
-                  router.push(`/contacts/${deal.contact.id}`)
-                }
-              }}
-            >
-              {deal.contact.name}
+          {contactName && contactName !== prospectName && (
+            <p className="text-[11px] text-white/50 truncate mt-0.5">
+              {contactName}
             </p>
           )}
         </div>
         {deal.value ? (
-          <span className="text-xs font-bold text-[#1A7A4A] flex-shrink-0">
+          <span className="text-xs font-bold text-emerald-400 flex-shrink-0">
             ${(deal.value / 1_000_000).toFixed(0)}M
           </span>
         ) : null}
       </div>
 
       {/* Badges */}
-      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
-        <Badge
-          variant="secondary"
-          className="text-[10px] bg-[#F8FAFC] text-[#64748B] border border-[#E2E8F0] font-medium"
-        >
+      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap relative z-10">
+        <Badge variant="secondary" className="text-[10px] bg-white/10 text-white/70 border-0 font-medium">
           {SERVICE_LABELS[deal.serviceType] || deal.serviceType}
         </Badge>
-        <span
-          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold border"
-          style={{ backgroundColor: temperature.bg, color: temperature.text, borderColor: `${temperature.text}20` }}
-        >
-          <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: temperature.dot }} />
-          {temperature.label}
+        <span className={cn(
+          'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold border',
+          tempKey === 'cold' && 'bg-blue-500/20 text-blue-300 border-blue-400/30',
+          tempKey === 'warm' && 'bg-amber-500/20 text-amber-300 border-amber-400/30',
+          tempKey === 'hot' && 'bg-red-500/20 text-red-300 border-red-400/30',
+          tempKey === 'lost' && 'bg-gray-500/20 text-gray-400 border-gray-400/30',
+        )}>
+          <span className={cn('h-1.5 w-1.5 rounded-full', urgency?.pulse && 'animate-pulse', tempKey === 'cold' && 'bg-blue-400', tempKey === 'warm' && 'bg-amber-400', tempKey === 'hot' && 'bg-red-400', tempKey === 'lost' && 'bg-gray-400')} />
+          {temp.label}
         </span>
       </div>
 
       {/* Bottom row: Assigned + Activity bar */}
-      <div className="flex items-center justify-between mt-2.5">
+      <div className="flex items-center justify-between mt-2.5 relative z-10">
         <div className="flex items-center gap-1.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#F1F5F9] text-[9px] font-bold text-[#64748B]">
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[9px] font-bold text-white/60">
             {getInitials(assignedName)}
           </div>
-          <span className="text-[10px] text-[#94A3B8] truncate max-w-[80px]">{assignedName}</span>
+          <span className="text-[10px] text-white/40 truncate max-w-[80px]">{assignedName}</span>
         </div>
 
         {urgency ? (
           <div className="flex items-center gap-1.5">
-            <div className="h-1 w-8 overflow-hidden rounded-full bg-[#F1F5F9]">
+            <div className="h-1 w-8 overflow-hidden rounded-full bg-white/10">
               <div
-                className="h-full rounded-full transition-all"
+                className={cn('h-full rounded-full transition-all', urgency.pulse && 'animate-pulse')}
                 style={{ width: urgency.width, backgroundColor: urgency.color }}
               />
             </div>
-            <span className="text-[10px] font-medium" style={{ color: urgency.color }}>
-              {urgency.label}
-            </span>
+            <span className="text-[10px] font-medium" style={{ color: urgency.color }}>{urgency.label}</span>
           </div>
         ) : (
-          <span className="text-[10px] text-[#94A3B8]">Activo</span>
+          <span className="text-[10px] text-white/30">Activo</span>
         )}
       </div>
     </div>

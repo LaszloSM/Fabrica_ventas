@@ -32,7 +32,9 @@ SERVICE_TYPES = [
 @router.get("")
 async def get_metrics(year: int = Query(2026), db=Depends(get_db)):
     deal_svc = DealService(db)
+    # Exclude deleted deals
     deals, _ = await deal_svc.list_deals(limit=1000)
+    deals = [d for d in deals if not getattr(d, 'deleted', False)]
 
     # Funnel
     stage_counts = {s: 0 for s in STAGE_ORDER}
@@ -90,16 +92,24 @@ async def get_metrics(year: int = Query(2026), db=Depends(get_db)):
             "userId": g.get("userId"),
         })
 
+    # Batch fetch team member names for leaderboard
+    assigned_ids = {d.assignedTo for d in deals if d.assignedTo}
+    team_members = {}
+    if assigned_ids:
+        async for doc in db["team_members"].find({"_id": {"$in": list(assigned_ids)}}):
+            team_members[doc["_id"]] = doc.get("name", doc["_id"])
+
     # Leaderboard
     owner_stats: dict = {}
     for deal in deals:
         owner = deal.assignedTo or "Sin asignar"
-        if owner not in owner_stats:
-            owner_stats[owner] = {"name": owner, "won": 0, "pipeline": 0, "deals": 0}
-        owner_stats[owner]["deals"] += 1
-        owner_stats[owner]["pipeline"] += deal.ponderatedValue or 0
+        owner_name = team_members.get(owner, owner)
+        if owner_name not in owner_stats:
+            owner_stats[owner_name] = {"name": owner_name, "won": 0, "pipeline": 0, "deals": 0}
+        owner_stats[owner_name]["deals"] += 1
+        owner_stats[owner_name]["pipeline"] += deal.ponderatedValue or 0
         if deal.stage == "GANADO":
-            owner_stats[owner]["won"] += deal.value or 0
+            owner_stats[owner_name]["won"] += deal.value or 0
 
     leaderboard = sorted(owner_stats.values(), key=lambda x: x["won"], reverse=True)
 

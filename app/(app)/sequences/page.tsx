@@ -6,7 +6,6 @@ import { Plus } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { TemplateSequence } from '@/types'
 
 export default function SequencesPage() {
@@ -19,11 +18,6 @@ export default function SequencesPage() {
     const res = await fetch('/api/sequences')
     const json = await res.json()
     setSequences(json.data || [])
-  }
-
-  async function fetchTemplateSequences() {
-    // In a real app, we'd have an API for this. For now, let's assume we can fetch them.
-    // I'll implement a quick API for this if needed, but let's see.
   }
 
   useEffect(() => {
@@ -45,10 +39,10 @@ export default function SequencesPage() {
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Secuencias de Prospección</h1>
-          <p className="text-gray-500 mt-1">Seguimiento automatizado de contactos</p>
+          <h1 className="text-2xl font-bold text-white">Secuencias de Prospección</h1>
+          <p className="text-white/50 mt-1">Seguimiento automatizado de contactos</p>
         </div>
-        <Button onClick={() => setOpen(true)} className="bg-green-600 hover:bg-green-700">
+        <Button onClick={() => setOpen(true)} className="bg-gradient-to-r from-[#f26522] to-[#d5551a] hover:from-[#d5551a] hover:to-[#b54514] text-white border-0">
           <Plus className="w-4 h-4 mr-2" /> Asignar Secuencia
         </Button>
       </div>
@@ -56,22 +50,22 @@ export default function SequencesPage() {
       <SequenceTracker sequences={sequences} />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Asignar Secuencia a Prospecto</DialogTitle></DialogHeader>
+        <DialogContent className="bg-[#1a1a2e]/95 border-white/10 backdrop-blur-xl">
+          <DialogHeader><DialogTitle className="text-white">Asignar Secuencia a Prospecto</DialogTitle></DialogHeader>
           <form onSubmit={handleAssign} className="space-y-4">
             <div>
-              <Label>Prospecto ID *</Label>
-              <Input required value={form.prospectId} onChange={e => setForm({...form, prospectId: e.target.value})} placeholder="ID del prospecto" />
+              <Label className="text-white/60">Prospecto ID *</Label>
+              <Input required value={form.prospectId} onChange={e => setForm({...form, prospectId: e.target.value})} placeholder="ID del prospecto" className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:ring-[#f26522]/50" />
             </div>
             <div>
-              <Label>Secuencia de Plantilla *</Label>
-              <Input required value={form.templateSequenceId} onChange={e => setForm({...form, templateSequenceId: e.target.value})} placeholder="ID de la secuencia" />
+              <Label className="text-white/60">Secuencia de Plantilla *</Label>
+              <Input required value={form.templateSequenceId} onChange={e => setForm({...form, templateSequenceId: e.target.value})} placeholder="ID de la secuencia" className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:ring-[#f26522]/50" />
             </div>
             <div>
-              <Label>Deal ID (Opcional)</Label>
-              <Input value={form.dealId} onChange={e => setForm({...form, dealId: e.target.value})} placeholder="ID del deal" />
+              <Label className="text-white/60">Deal ID (Opcional)</Label>
+              <Input value={form.dealId} onChange={e => setForm({...form, dealId: e.target.value})} placeholder="ID del deal" className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:ring-[#f26522]/50" />
             </div>
-            <Button type="submit" className="w-full bg-green-600 hover:bg-green-700">Asignar Secuencia</Button>
+            <Button type="submit" className="w-full bg-gradient-to-r from-[#f26522] to-[#d5551a] hover:from-[#d5551a] hover:to-[#b54514] text-white border-0">Asignar Secuencia</Button>
           </form>
         </DialogContent>
       </Dialog>
