@@ -28,28 +28,30 @@ El modelo actual usa `Deal.value` (precio monetario) y stages de negociación ti
 ### Cambios al modelo
 
 #### `Deal` (Oportunidad)
-- `value` → **eliminado de la UI**, queda `null` en DB (sin campos de precio visibles en ningún componente)
-- `stage` → simplificado a: `FRIO | TIBIO | CALIENTE | REUNION_AGENDADA | GANADO | PERDIDO`
-- Nuevo campo: `proyectos` (string, texto libre con nombres de proyectos reales)
-- Nuevo campo: `sourceTab` (string: "2026" | "2025" | "banca_caliente" | "banca_frio" | "caf" | "airtable")
+- `value` → **eliminado de la UI**, queda `null` en DB. No aparece en ningún componente frontend. El schema Python lo mantiene como `Optional[float] = None`.
+- `stage` → **se conserva el enum existente de 8 etapas** en el backend. El import mapea temperatura a etapas así:
+  - `Frio` → `PRIMER_CONTACTO`
+  - `Tibio` → `EN_SECUENCIA`
+  - `Caliente` → `REUNION_AGENDADA`
+  - Sin estado → `PROSPECTO_IDENTIFICADO`
+- El **Kanban UI** agrupa las etapas en columnas visuales: "Frio" (PROSPECTO_IDENTIFICADO + PRIMER_CONTACTO), "Tibio" (EN_SECUENCIA + SENAL_DETECTADA), "Caliente" (REUNION_AGENDADA + PROPUESTA_ENVIADA + NEGOCIACION), "Ganado" (GANADO), "Perdido" (PERDIDO). Drag & drop mueve al primer stage de la columna destino.
+- **Nuevo campo:** `proyectos` (string, texto libre con nombres reales de proyectos). Se agrega a la colección deals en MongoDB y al schema Pydantic `DealCreate`/`DealUpdate`.
+- **Nuevo campo:** `sourceTab` (string). Se agrega igual que `proyectos`.
 
 #### `Prospect` (Organización)
-- Nuevo campo: `segmento` (string: "Banca", "CAF", "Sector Público", "Social/Impacto", "Empresarial", etc.)
-- `industry` → se preserva y enriquece desde los datos del sheet
+- `segmento` ya existe en el modelo. Se usa para: "Banca", "CAF", "Sector Público", "Social/Impacto", "Empresarial", etc.
+- `industry` → se preserva y enriquece desde los datos del sheet.
 
 #### `Contact` (Persona)
-- Se preserva todo el modelo actual
-- `temperature` es propiedad del Deal, no del Contact
+- Se preserva todo el modelo actual.
+- `temperature` es propiedad del Deal, no del Contact (correcto en el modelo actual).
+- Notas del contacto → se registran como Activity de tipo `NOTE` (no campo en Contact).
 
-#### `DealStage` enum actualizado
+#### `ActivityType` enum — se conserva el existente
 ```typescript
-FRIO = 'FRIO'
-TIBIO = 'TIBIO'
-CALIENTE = 'CALIENTE'
-REUNION_AGENDADA = 'REUNION_AGENDADA'
-GANADO = 'GANADO'
-PERDIDO = 'PERDIDO'
+EMAIL | LINKEDIN | CALL | MEETING | NOTE
 ```
+Las columnas de actividad del sheet se mapean a estos tipos exactos.
 
 ---
 
@@ -66,15 +68,24 @@ PERDIDO = 'PERDIDO'
 | CAF | ~56 | Internacionales. País, institución, LinkedIn |
 | Contactos airtable | ~462 | Export Airtable. Incluye # proyectos, proyectos, industria, Resumen IA |
 
-### Endpoint
-`POST /api/v1/import/comprehensive` — ya existe en `backend/app/api/v1/endpoints/import_comprehensive.py`. Se reescribe completamente para manejar todas las tabs.
+### Endpoint — dos modos
 
-El endpoint:
-1. Descarga todas las tabs del Google Sheet en paralelo (usando sus GIDs)
-2. Parsea cada tab con su función específica
-3. Hace **upsert** por email (primario) o nombre+organización (fallback) — nunca falla con 409
-4. Convierte columnas de actividad a registros `Activity`
-5. Retorna stats: `{prospects, contacts, deals, activities, updated, created}`
+**Modo A (sincronización automática desde Google Sheets):**
+`POST /api/v1/import/from-sheets` — nuevo endpoint en `import_data.py`.
+Descarga todas las tabs usando sus GIDs vía `httpx` (mismo mecanismo que el `import_data.py` existente que ya usa httpx para descargar el sheet). GIDs de cada tab se configuran como constantes en el archivo.
+
+**Modo B (upload manual de CSVs):**
+`POST /api/v1/import/comprehensive` — ya existe. Se reescribe `ImportService.import_from_files()` para manejar las 6 estructuras de tab por nombre de archivo.
+
+La UI (Settings → Admin) usa el **Modo A** como botón principal. El **Modo B** queda como fallback.
+
+Ambos modos:
+1. Parsean cada tab con su función específica
+2. Hacen **upsert real** por email (primario) o nombre+organización (fallback) — actualiza campos vacíos, no sobreescribe los que ya tienen valor
+3. **Nunca retorna 409** — siempre procesa y retorna stats
+4. Convierten columnas de actividad a registros `Activity` (solo si el campo tiene valor no vacío)
+5. Para "Oportunidades" con múltiples servicios separados por coma → crea **un Deal por cada servicio**
+6. Retorna: `{prospects_created, prospects_updated, contacts_created, contacts_updated, deals_created, activities_created}`
 
 ### Parsers por tab
 
