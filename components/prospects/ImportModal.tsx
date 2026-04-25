@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
 import { AlertTriangle, CheckCircle, Database, Loader2, Trash2 } from 'lucide-react'
 
@@ -104,9 +104,9 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
             <Database className="w-5 h-5 text-green-600" />
             Importar Base de Datos
           </DialogTitle>
-          <DialogDescription>
+          <p className="text-sm text-gray-500 mt-1">
             Importa los ~1,400 contactos desde los archivos CSV de CoimpactoB.
-          </DialogDescription>
+          </p>
         </DialogHeader>
 
         {result ? (
