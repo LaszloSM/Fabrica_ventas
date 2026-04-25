@@ -3,8 +3,8 @@ import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { differenceInDays } from 'date-fns'
 import { useRouter } from 'next/navigation'
-import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { Clock, AlertCircle } from 'lucide-react'
 import type { DealWithRelations } from '@/types'
 import { DealStage } from '@/types'
 
@@ -21,34 +21,19 @@ const SERVICE_LABELS: Record<string, string> = {
   FUNDACION_EXPERIENCIA: 'Experiencia',
 }
 
-const TEMPERATURE_CONFIG: Record<string, { label: string; gradient: string; glow: string }> = {
-  cold: { label: 'Frío', gradient: 'from-blue-500/20 to-cyan-400/10', glow: 'shadow-blue-500/30' },
-  warm: { label: 'Tibio', gradient: 'from-amber-500/20 to-yellow-400/10', glow: 'shadow-amber-500/30' },
-  hot: { label: 'Caliente', gradient: 'from-red-500/20 to-orange-400/10', glow: 'shadow-red-500/30' },
-  lost: { label: 'Perdido', gradient: 'from-gray-500/20 to-gray-400/10', glow: 'shadow-gray-500/20' },
-}
-
-function getInitials(name?: string | null) {
-  if (!name) return '?'
-  return name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
-}
-
-function getTemperature(stage: DealStage): keyof typeof TEMPERATURE_CONFIG {
+function getTemperature(stage: DealStage) {
   const coldStages = ['PROSPECTO_IDENTIFICADO', 'SENAL_DETECTADA', 'PRIMER_CONTACTO']
   const warmStages = ['EN_SECUENCIA', 'REUNION_AGENDADA']
   const hotStages = ['PROPUESTA_ENVIADA', 'NEGOCIACION', 'GANADO']
-
   if (coldStages.includes(stage)) return 'cold'
   if (warmStages.includes(stage)) return 'warm'
   if (hotStages.includes(stage)) return 'hot'
   return 'lost'
 }
 
-function getActivityUrgency(days: number) {
-  if (days >= 14) return { color: '#ef4444', label: `${days}d`, width: '100%', pulse: true }
-  if (days >= 7) return { color: '#f59e0b', label: `${days}d`, width: '66%', pulse: false }
-  if (days >= 3) return { color: '#f26522', label: `${days}d`, width: '33%', pulse: false }
-  return null
+function getInitials(name?: string | null) {
+  if (!name) return '?'
+  return name.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase()
 }
 
 interface DealCardProps {
@@ -65,13 +50,21 @@ export function DealCard({ deal, onClick }: DealCardProps) {
     ? differenceInDays(new Date(), new Date(lastActivity.doneAt))
     : differenceInDays(new Date(), new Date(deal.createdAt))
 
-  const tempKey = getTemperature(deal.stage)
-  const temp = TEMPERATURE_CONFIG[tempKey]
-  const urgency = getActivityUrgency(daysSinceActivity)
+  const temp = getTemperature(deal.stage)
+  const isStale = daysSinceActivity >= 7
+  const isCritical = daysSinceActivity >= 14
 
   const prospectName = deal.prospect?.name || 'Sin organización'
   const contactName = deal.contact?.name
   const assignedName = deal.assignedUser?.name || deal.assignedTo || 'Sin asignar'
+  const serviceLabel = SERVICE_LABELS[deal.serviceType] || deal.serviceType
+
+  const tempDot: Record<string, string> = {
+    cold: '#60a5fa',
+    warm: '#fbbf24',
+    hot: '#f97316',
+    lost: '#6b7280',
+  }
 
   return (
     <div
@@ -81,88 +74,98 @@ export function DealCard({ deal, onClick }: DealCardProps) {
       {...listeners}
       onClick={onClick}
       className={cn(
-        'group relative cursor-pointer select-none transition-all duration-300',
-        'rounded-xl border border-white/10 p-3.5',
-        'bg-gradient-to-br ' + temp.gradient,
-        'backdrop-blur-md',
-        'hover:shadow-lg hover:shadow-' + temp.glow + ' hover:-translate-y-1 hover:border-white/20',
-        'active:scale-[0.98]',
-        isDragging && 'opacity-70 rotate-2 scale-105 shadow-2xl z-50'
+        'group relative cursor-pointer select-none rounded-xl border transition-all duration-200',
+        'bg-white/[0.035] border-white/[0.07]',
+        'hover:bg-white/[0.055] hover:border-white/[0.13] hover:-translate-y-0.5',
+        'hover:shadow-lg hover:shadow-black/20',
+        'active:scale-[0.98] active:translate-y-0',
+        isDragging && 'opacity-60 rotate-1 scale-[1.02] shadow-2xl z-50 border-white/20'
       )}
     >
-      {/* Glow border effect */}
-      <div className={cn(
-        'absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500',
-        'bg-gradient-to-r ' + temp.gradient
-      )} style={{ filter: 'blur(8px)', zIndex: -1 }} />
+      {/* Stale indicator top bar */}
+      {(isStale || isCritical) && (
+        <div
+          className={cn('absolute top-0 left-0 right-0 h-[2px] rounded-t-xl',
+            isCritical ? 'bg-red-500' : 'bg-amber-500'
+          )}
+        />
+      )}
 
-      {/* Top row: Avatar + Name + Value */}
-      <div className="flex items-start gap-2.5 relative z-10">
-        <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#f26522] to-[#d5551a] text-[10px] font-bold text-white shadow-lg shadow-orange-500/30">
-          {getInitials(prospectName)}
+      <div className="p-3">
+        {/* Top: Avatar + name + value */}
+        <div className="flex items-start gap-2.5">
+          {/* Avatar */}
+          <div
+            className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg text-[10px] font-bold text-white"
+            style={{ background: 'linear-gradient(135deg, #f26522 0%, #c44e18 100%)', boxShadow: '0 2px 8px rgba(242,101,34,0.25)' }}
+          >
+            {getInitials(prospectName)}
+          </div>
+
+          {/* Name + contact */}
+          <div className="flex-1 min-w-0">
+            <p
+              className="text-[13px] font-semibold text-white/90 leading-tight truncate group-hover:text-white transition-colors"
+              onClick={(e) => {
+                e.stopPropagation()
+                if (deal.contact?.id) router.push(`/contacts/${deal.contact.id}`)
+              }}
+            >
+              {prospectName}
+            </p>
+            {contactName && contactName !== prospectName && (
+              <p className="text-[11px] text-white/40 truncate mt-0.5 leading-tight">{contactName}</p>
+            )}
+          </div>
+
+          {/* Value */}
+          {deal.value ? (
+            <span className="text-[12px] font-bold text-emerald-400 flex-shrink-0 tabular-nums">
+              ${(deal.value / 1_000_000).toFixed(1)}M
+            </span>
+          ) : null}
         </div>
-        <div className="flex-1 min-w-0">
-          <p
-            className="text-sm font-semibold text-white leading-tight truncate group-hover:text-[#f26522] transition-colors"
-            onClick={(e) => {
-              e.stopPropagation()
-              if (deal.contact?.id) router.push(`/contacts/${deal.contact.id}`)
+
+        {/* Service + temp badges */}
+        <div className="flex items-center gap-1.5 mt-2.5 flex-wrap">
+          <span className="inline-flex items-center rounded-md border border-white/[0.07] bg-white/[0.05] px-1.5 py-0.5 text-[10px] font-medium text-white/55 leading-none">
+            {serviceLabel}
+          </span>
+          <span className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold leading-none"
+            style={{
+              background: `${tempDot[temp]}18`,
+              color: tempDot[temp],
+              border: `1px solid ${tempDot[temp]}30`,
             }}
           >
-            {prospectName}
-          </p>
-          {contactName && contactName !== prospectName && (
-            <p className="text-[11px] text-white/50 truncate mt-0.5">
-              {contactName}
-            </p>
+            <span className="h-1.5 w-1.5 rounded-full flex-shrink-0" style={{ background: tempDot[temp] }} />
+            {temp === 'cold' ? 'Frío' : temp === 'warm' ? 'Tibio' : temp === 'hot' ? 'Caliente' : 'Perdido'}
+          </span>
+        </div>
+
+        {/* Footer: assigned + stale */}
+        <div className="flex items-center justify-between mt-2.5">
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white/[0.07] text-[9px] font-bold text-white/50 flex-shrink-0">
+              {getInitials(assignedName)}
+            </div>
+            <span className="text-[10px] text-white/35 truncate max-w-[80px]">{assignedName}</span>
+          </div>
+
+          {isCritical ? (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-red-400">
+              <AlertCircle className="w-3 h-3" />
+              {daysSinceActivity}d
+            </span>
+          ) : isStale ? (
+            <span className="flex items-center gap-1 text-[10px] font-medium text-amber-400">
+              <Clock className="w-3 h-3" />
+              {daysSinceActivity}d
+            </span>
+          ) : (
+            <span className="text-[10px] text-white/25">Activo</span>
           )}
         </div>
-        {deal.value ? (
-          <span className="text-xs font-bold text-emerald-400 flex-shrink-0">
-            ${(deal.value / 1_000_000).toFixed(0)}M
-          </span>
-        ) : null}
-      </div>
-
-      {/* Badges */}
-      <div className="flex items-center gap-1.5 mt-2.5 flex-wrap relative z-10">
-        <Badge variant="secondary" className="text-[10px] bg-white/10 text-white/70 border-0 font-medium">
-          {SERVICE_LABELS[deal.serviceType] || deal.serviceType}
-        </Badge>
-        <span className={cn(
-          'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold border',
-          tempKey === 'cold' && 'bg-blue-500/20 text-blue-300 border-blue-400/30',
-          tempKey === 'warm' && 'bg-amber-500/20 text-amber-300 border-amber-400/30',
-          tempKey === 'hot' && 'bg-red-500/20 text-red-300 border-red-400/30',
-          tempKey === 'lost' && 'bg-gray-500/20 text-gray-400 border-gray-400/30',
-        )}>
-          <span className={cn('h-1.5 w-1.5 rounded-full', urgency?.pulse && 'animate-pulse', tempKey === 'cold' && 'bg-blue-400', tempKey === 'warm' && 'bg-amber-400', tempKey === 'hot' && 'bg-red-400', tempKey === 'lost' && 'bg-gray-400')} />
-          {temp.label}
-        </span>
-      </div>
-
-      {/* Bottom row: Assigned + Activity bar */}
-      <div className="flex items-center justify-between mt-2.5 relative z-10">
-        <div className="flex items-center gap-1.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-[9px] font-bold text-white/60">
-            {getInitials(assignedName)}
-          </div>
-          <span className="text-[10px] text-white/40 truncate max-w-[80px]">{assignedName}</span>
-        </div>
-
-        {urgency ? (
-          <div className="flex items-center gap-1.5">
-            <div className="h-1 w-8 overflow-hidden rounded-full bg-white/10">
-              <div
-                className={cn('h-full rounded-full transition-all', urgency.pulse && 'animate-pulse')}
-                style={{ width: urgency.width, backgroundColor: urgency.color }}
-              />
-            </div>
-            <span className="text-[10px] font-medium" style={{ color: urgency.color }}>{urgency.label}</span>
-          </div>
-        ) : (
-          <span className="text-[10px] text-white/30">Activo</span>
-        )}
       </div>
     </div>
   )

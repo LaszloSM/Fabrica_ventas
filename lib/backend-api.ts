@@ -14,17 +14,27 @@ export async function proxyToBackend(req: NextRequest, path: string) {
   const method = req.method
   const query = req.nextUrl.search || ''
   const body = method === 'GET' || method === 'HEAD' ? undefined : await req.text()
-  const response = await fetch(`${BACKEND_URL}${API_PREFIX}${path}${query}`, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-user-id': session.user?.id || '',
-      'x-user-email': session.user?.email || '',
-      'x-user-role': session.user?.role || '',
-    },
-    body,
-    cache: 'no-store',
-  })
+
+  let response: Response
+  try {
+    response = await fetch(`${BACKEND_URL}${API_PREFIX}${path}${query}`, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-id': session.user?.id || '',
+        'x-user-email': session.user?.email || '',
+        'x-user-role': session.user?.role || '',
+      },
+      body,
+      cache: 'no-store',
+    })
+  } catch (err) {
+    console.error(`[backend-api] Connection error to ${BACKEND_URL}${API_PREFIX}${path}:`, err)
+    return NextResponse.json(
+      { data: null, error: 'Backend no disponible' },
+      { status: 503 }
+    )
+  }
 
   const text = await response.text()
 

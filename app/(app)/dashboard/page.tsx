@@ -62,25 +62,25 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="mt-1 text-sm text-white/50">Estado actual de la estrategia de ventas</p>
+          <h1 className="text-[18px] font-semibold text-white">Dashboard</h1>
+          <p className="mt-0.5 text-[13px] text-white/40">Estado actual de la estrategia de ventas</p>
         </div>
         <div className="flex gap-2">
           <a href="/api/reports/pipeline" download>
             <Button
               variant="outline"
-              className="flex items-center gap-2 text-emerald-400 border-emerald-400/30 bg-white/5 hover:bg-emerald-400/10 hover:text-emerald-300"
+              className="flex items-center gap-2 text-[13px] text-emerald-400 border-emerald-400/20 bg-white/[0.03] hover:bg-emerald-400/[0.08] hover:text-emerald-300 h-8 px-3"
             >
-              <FileSpreadsheet className="w-4 h-4" />
-              Pipeline Excel
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              Excel
             </Button>
           </a>
           <a href="/api/reports/quarterly?quarter=2&year=2026" download>
             <Button
               variant="outline"
-              className="flex items-center gap-2 text-blue-400 border-blue-400/30 bg-white/5 hover:bg-blue-400/10 hover:text-blue-300"
+              className="flex items-center gap-2 text-[13px] text-blue-400 border-blue-400/20 bg-white/[0.03] hover:bg-blue-400/[0.08] hover:text-blue-300 h-8 px-3"
             >
-              <FileText className="w-4 h-4" />
+              <FileText className="w-3.5 h-3.5" />
               Reporte Q2
             </Button>
           </a>
@@ -124,19 +124,19 @@ export default function DashboardPage() {
       </div>
 
       {/* Pipeline Progress */}
-      <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-5">
-        <div className="flex items-center justify-between mb-2">
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-5">
+        <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-sm font-semibold text-white">Progreso hacia meta anual</h2>
-            <p className="text-xs text-white/40">
+            <h2 className="text-[13px] font-semibold text-white">Progreso hacia meta anual</h2>
+            <p className="text-[11px] text-white/35 mt-0.5">
               ${(summary.totalPipeline / 1_000_000).toFixed(1)}M de ${(totalGoalsTarget / 1_000_000).toFixed(1)}M
             </p>
           </div>
-          <span className="text-sm font-bold text-[#f26522]">{Math.round(pipelinePercent)}%</span>
+          <span className="text-lg font-bold text-[#f26522] tabular-nums">{Math.round(pipelinePercent)}%</span>
         </div>
-        <div className="h-3 w-full overflow-hidden rounded-full bg-white/10">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-white/[0.07]">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-[#f26522] to-[#d5551a] transition-all duration-700"
+            className="h-full rounded-full bg-gradient-to-r from-[#f26522] to-[#c44e18] transition-all duration-700"
             style={{ width: `${Math.min(pipelinePercent, 100)}%` }}
           />
         </div>
@@ -144,7 +144,7 @@ export default function DashboardPage() {
 
       {/* Goals Grid */}
       <div>
-        <h2 className="mb-4 text-lg font-semibold text-white">Metas del Trimestre</h2>
+        <h2 className="mb-4 text-[14px] font-semibold text-white">Metas del Trimestre</h2>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {metrics.goals.map((goal: any) => (
             <GoalProgressCard key={goal.id} goal={goal} />
@@ -154,32 +154,32 @@ export default function DashboardPage() {
 
       {/* Middle section: Funnel + Leaderboard + Activity */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Embudo de Conversión</h2>
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-5">
+          <h2 className="mb-4 text-[13px] font-semibold text-white">Embudo de Conversión</h2>
           <FunnelChart data={metrics.funnel} />
         </div>
 
-        <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-          <h2 className="mb-4 text-lg font-semibold text-white">Ranking del Equipo</h2>
+        <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-5">
+          <h2 className="mb-4 text-[13px] font-semibold text-white">Ranking del Equipo</h2>
           <TeamLeaderboard data={metrics.leaderboard} />
         </div>
 
         <div className="space-y-6">
-          <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-            <h2 className="mb-4 text-lg font-semibold text-white">Próximas Acciones Urgentes</h2>
+          <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-5">
+            <h2 className="mb-4 text-[13px] font-semibold text-white">Próximas Acciones Urgentes</h2>
             <UrgentActions />
           </div>
 
-          <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-            <h2 className="mb-4 text-lg font-semibold text-white">Actividad Reciente</h2>
+          <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-5">
+            <h2 className="mb-4 text-[13px] font-semibold text-white">Actividad Reciente</h2>
             <RecentActivity />
           </div>
         </div>
       </div>
 
       {/* Quarterly Grid */}
-      <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-        <h2 className="mb-4 text-lg font-semibold text-white">Avance Trimestral por Servicio</h2>
+      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-5">
+        <h2 className="mb-4 text-[13px] font-semibold text-white">Avance Trimestral por Servicio</h2>
         <QuarterlyGrid goals={metrics.goals} />
       </div>
     </div>

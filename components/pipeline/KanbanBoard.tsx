@@ -8,23 +8,37 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { DealCard } from './DealCard'
 import { DealDrawer } from './DealDrawer'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Search, Filter, X, Users, Thermometer, Zap } from 'lucide-react'
+import { Search, Filter, X, Users, Thermometer, Plus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { DealWithRelations } from '@/types'
 import { DealStage } from '@/types'
 
-const STAGES: { key: DealStage; label: string; color: string; glow: string }[] = [
-  { key: 'PROSPECTO_IDENTIFICADO', label: 'Identificado', color: '#64748b', glow: 'shadow-slate-500/20' },
-  { key: 'SENAL_DETECTADA',        label: 'Señal', color: '#f59e0b', glow: 'shadow-amber-500/20' },
-  { key: 'PRIMER_CONTACTO',        label: 'Primer Contacto', color: '#3b82f6', glow: 'shadow-blue-500/20' },
-  { key: 'EN_SECUENCIA',           label: 'En Secuencia', color: '#8b5cf6', glow: 'shadow-violet-500/20' },
-  { key: 'REUNION_AGENDADA',       label: 'Reunión Agendada', color: '#f26522', glow: 'shadow-orange-500/20' },
-  { key: 'PROPUESTA_ENVIADA',      label: 'Propuesta Enviada', color: '#ec4899', glow: 'shadow-pink-500/20' },
-  { key: 'NEGOCIACION',            label: 'Negociación', color: '#ef4444', glow: 'shadow-red-500/20' },
-  { key: 'GANADO',                 label: 'Ganado', color: '#10b981', glow: 'shadow-emerald-500/20' },
-  { key: 'PERDIDO',                label: 'Perdido', color: '#6b7280', glow: 'shadow-gray-500/20' },
+const STAGES: {
+  key: DealStage
+  label: string
+  color: string
+  shortLabel: string
+}[] = [
+  { key: 'PROSPECTO_IDENTIFICADO', label: 'Identificado',       shortLabel: 'ID',  color: '#64748b' },
+  { key: 'SENAL_DETECTADA',        label: 'Señal Detectada',    shortLabel: 'SD',  color: '#f59e0b' },
+  { key: 'PRIMER_CONTACTO',        label: 'Primer Contacto',    shortLabel: 'PC',  color: '#3b82f6' },
+  { key: 'EN_SECUENCIA',           label: 'En Secuencia',       shortLabel: 'ES',  color: '#8b5cf6' },
+  { key: 'REUNION_AGENDADA',       label: 'Reunión Agendada',   shortLabel: 'RA',  color: '#f26522' },
+  { key: 'PROPUESTA_ENVIADA',      label: 'Propuesta Enviada',  shortLabel: 'PE',  color: '#ec4899' },
+  { key: 'NEGOCIACION',            label: 'Negociación',        shortLabel: 'NG',  color: '#ef4444' },
+  { key: 'GANADO',                 label: 'Ganado',             shortLabel: 'GA',  color: '#10b981' },
+  { key: 'PERDIDO',                label: 'Perdido',            shortLabel: 'PR',  color: '#475569' },
 ]
+
+function getTemperature(stage: DealStage): string {
+  const coldStages = ['PROSPECTO_IDENTIFICADO', 'SENAL_DETECTADA', 'PRIMER_CONTACTO']
+  const warmStages = ['EN_SECUENCIA', 'REUNION_AGENDADA']
+  const hotStages = ['PROPUESTA_ENVIADA', 'NEGOCIACION', 'GANADO']
+  if (coldStages.includes(stage)) return 'frio'
+  if (warmStages.includes(stage)) return 'tibio'
+  if (hotStages.includes(stage)) return 'caliente'
+  return 'perdido'
+}
 
 export function KanbanBoard() {
   const [deals, setDeals] = useState<DealWithRelations[]>([])
@@ -47,8 +61,8 @@ export function KanbanBoard() {
           fetch('/api/deals'),
           fetch('/api/team')
         ])
-        if (!dealsRes.ok) throw new Error(`Error cargando deals: ${dealsRes.status}`)
-        if (!teamRes.ok) throw new Error(`Error cargando equipo: ${teamRes.status}`)
+        if (!dealsRes.ok) throw new Error(`Error ${dealsRes.status}`)
+        if (!teamRes.ok) throw new Error(`Error equipo ${teamRes.status}`)
         const dealsJson = await dealsRes.json()
         const teamJson = await teamRes.json()
         setDeals(dealsJson.data || [])
@@ -85,22 +99,18 @@ export function KanbanBoard() {
     return deals.filter((deal) => {
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
-        const matchProspect = deal.prospect?.name?.toLowerCase().includes(q)
-        const matchContact = deal.contact?.name?.toLowerCase().includes(q)
-        const matchOrg = deal.prospect?.name?.toLowerCase().includes(q)
-        if (!matchProspect && !matchContact && !matchOrg) return false
+        if (
+          !deal.prospect?.name?.toLowerCase().includes(q) &&
+          !deal.contact?.name?.toLowerCase().includes(q)
+        ) return false
       }
       if (filterAssignedTo && deal.assignedTo !== filterAssignedTo) return false
-      if (filterTemperature) {
-        const temp = getTemperature(deal.stage)
-        if (temp !== filterTemperature) return false
-      }
+      if (filterTemperature && getTemperature(deal.stage) !== filterTemperature) return false
       return true
     })
   }, [deals, searchQuery, filterAssignedTo, filterTemperature])
 
   const dealsByStage = (stage: DealStage) => filteredDeals.filter((d) => d.stage === stage)
-  const stageCount = (stage: DealStage) => dealsByStage(stage).length
   const stageValue = (stage: DealStage) => dealsByStage(stage).reduce((sum, d) => sum + (d.value || 0), 0)
   const totalValue = filteredDeals.reduce((sum, d) => sum + (d.value || 0), 0)
   const hasActiveFilters = searchQuery || filterAssignedTo || filterTemperature
@@ -108,9 +118,9 @@ export function KanbanBoard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="flex items-center gap-3 text-white/40">
-          <Zap className="w-5 h-5 animate-pulse" />
-          <span className="text-sm">Cargando pipeline...</span>
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 rounded-full border-2 border-[#f26522]/30 border-t-[#f26522] animate-spin" />
+          <span className="text-sm text-white/40">Cargando pipeline...</span>
         </div>
       </div>
     )
@@ -118,10 +128,13 @@ export function KanbanBoard() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4">
-        <p className="text-red-400 font-medium">Error al cargar el pipeline</p>
-        <p className="text-red-300/60 text-sm mt-1">{error}</p>
-        <button onClick={() => window.location.reload()} className="mt-3 px-4 py-2 bg-red-500/20 text-red-400 rounded-lg text-sm hover:bg-red-500/30 transition-colors">
+      <div className="rounded-xl border border-red-500/20 bg-red-500/[0.06] p-5 max-w-sm">
+        <p className="text-red-400 font-semibold text-sm">Error al cargar el pipeline</p>
+        <p className="text-red-300/50 text-xs mt-1">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="mt-3 px-4 py-1.5 bg-red-500/15 hover:bg-red-500/25 text-red-400 rounded-lg text-xs font-medium transition-colors cursor-pointer"
+        >
           Reintentar
         </button>
       </div>
@@ -130,123 +143,159 @@ export function KanbanBoard() {
 
   return (
     <div className="space-y-4">
-      {/* Search & Filters */}
-      <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-4 space-y-3">
-        <div className="flex gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-            <Input
-              placeholder="Buscar por contacto o empresa..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:ring-[#f26522]/50"
-            />
-          </div>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className={cn(
-              'flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all',
-              showFilters || hasActiveFilters
-                ? 'bg-[#f26522]/20 border-[#f26522]/30 text-[#f26522]'
-                : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
-            )}
-          >
-            <Filter className="w-4 h-4" />
-            Filtros
-            {hasActiveFilters && (
-              <Badge variant="secondary" className="bg-[#f26522]/20 text-[#f26522] text-xs border-0">
-                Activos
-              </Badge>
-            )}
-          </button>
+      {/* Toolbar */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Search */}
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" />
+          <Input
+            placeholder="Buscar deal o empresa..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-9 text-sm border-white/[0.07] bg-white/[0.04] text-white placeholder:text-white/30 focus-visible:ring-[#f26522]/30 focus-visible:border-white/15"
+          />
         </div>
 
-        {showFilters && (
-          <div className="flex flex-wrap gap-3 pt-2 border-t border-white/10">
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-white/30" />
-              <select
-                value={filterAssignedTo}
-                onChange={(e) => setFilterAssignedTo(e.target.value)}
-                className="text-sm border border-white/10 rounded-lg px-3 py-1.5 bg-white/5 text-white focus:outline-none focus:ring-2 focus:ring-[#f26522]/50"
-              >
-                <option value="" className="bg-[#1a1a2e]">Todos los responsables</option>
-                {teamMembers.map((m) => (
-                  <option key={m.id} value={m.id} className="bg-[#1a1a2e]">{m.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <Thermometer className="w-4 h-4 text-white/30" />
-              <select
-                value={filterTemperature}
-                onChange={(e) => setFilterTemperature(e.target.value)}
-                className="text-sm border border-white/10 rounded-lg px-3 py-1.5 bg-white/5 text-white focus:outline-none focus:ring-2 focus:ring-[#f26522]/50"
-              >
-                <option value="" className="bg-[#1a1a2e]">Todas las temperaturas</option>
-                <option value="frio" className="bg-[#1a1a2e]">Frío</option>
-                <option value="tibio" className="bg-[#1a1a2e]">Tibio</option>
-                <option value="caliente" className="bg-[#1a1a2e]">Caliente</option>
-              </select>
-            </div>
-            {hasActiveFilters && (
-              <button
-                onClick={() => { setSearchQuery(''); setFilterAssignedTo(''); setFilterTemperature('') }}
-                className="flex items-center gap-1 text-sm text-red-400 hover:text-red-300 px-2 transition-colors"
-              >
-                <X className="w-3 h-3" />
-                Limpiar
-              </button>
-            )}
-          </div>
-        )}
+        {/* Filter toggle */}
+        <button
+          onClick={() => setShowFilters(!showFilters)}
+          className={cn(
+            'flex items-center gap-1.5 px-3 h-9 rounded-xl border text-[13px] font-medium transition-all cursor-pointer',
+            showFilters || hasActiveFilters
+              ? 'bg-[rgba(242,101,34,0.12)] border-[rgba(242,101,34,0.25)] text-[#f26522]'
+              : 'bg-white/[0.04] border-white/[0.07] text-white/50 hover:text-white/80 hover:bg-white/[0.07]'
+          )}
+        >
+          <Filter className="w-3.5 h-3.5" />
+          Filtrar
+          {hasActiveFilters && (
+            <span className="ml-0.5 px-1.5 py-0.5 rounded text-[10px] bg-[#f26522] text-white font-bold leading-none">
+              ON
+            </span>
+          )}
+        </button>
 
-        <div className="flex items-center gap-4 text-sm text-white/40 pt-1">
-          <span className="font-medium text-white">{filteredDeals.length} deals</span>
+        {/* Stats */}
+        <div className="flex items-center gap-3 ml-auto text-[13px]">
+          <span className="text-white/40">
+            <span className="font-semibold text-white">{filteredDeals.length}</span> deals
+          </span>
           {totalValue > 0 && (
-            <span>Valor total: <strong className="text-emerald-400">${(totalValue / 1_000_000).toFixed(1)}M</strong></span>
+            <span className="text-white/40">
+              <span className="font-semibold text-emerald-400">${(totalValue / 1_000_000).toFixed(1)}M</span> total
+            </span>
           )}
         </div>
       </div>
 
+      {/* Filter panel */}
+      {showFilters && (
+        <div className="flex items-center gap-4 flex-wrap rounded-xl border border-white/[0.07] bg-white/[0.025] px-4 py-3">
+          <div className="flex items-center gap-2">
+            <Users className="w-3.5 h-3.5 text-white/30" />
+            <select
+              value={filterAssignedTo}
+              onChange={(e) => setFilterAssignedTo(e.target.value)}
+              className="text-[12px] border border-white/[0.07] rounded-lg px-2.5 py-1.5 bg-white/[0.05] text-white/80 focus:outline-none focus:ring-1 focus:ring-[#f26522]/40 cursor-pointer"
+            >
+              <option value="" className="bg-[#0d0d1a]">Todos los responsables</option>
+              {teamMembers.map((m) => (
+                <option key={m.id} value={m.id} className="bg-[#0d0d1a]">{m.name}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Thermometer className="w-3.5 h-3.5 text-white/30" />
+            <select
+              value={filterTemperature}
+              onChange={(e) => setFilterTemperature(e.target.value)}
+              className="text-[12px] border border-white/[0.07] rounded-lg px-2.5 py-1.5 bg-white/[0.05] text-white/80 focus:outline-none focus:ring-1 focus:ring-[#f26522]/40 cursor-pointer"
+            >
+              <option value="" className="bg-[#0d0d1a]">Toda temperatura</option>
+              <option value="frio" className="bg-[#0d0d1a]">Frío</option>
+              <option value="tibio" className="bg-[#0d0d1a]">Tibio</option>
+              <option value="caliente" className="bg-[#0d0d1a]">Caliente</option>
+            </select>
+          </div>
+
+          {hasActiveFilters && (
+            <button
+              onClick={() => { setSearchQuery(''); setFilterAssignedTo(''); setFilterTemperature('') }}
+              className="flex items-center gap-1 text-[12px] text-white/40 hover:text-red-400 transition-colors cursor-pointer ml-auto"
+            >
+              <X className="w-3.5 h-3.5" />
+              Limpiar filtros
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Kanban */}
       <DndContext sensors={sensors} collisionDetection={closestCorners} onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-4 min-h-[calc(100vh-240px)]">
-          {STAGES.map(({ key, label, color, glow }) => {
-            const count = stageCount(key)
+        <div className="flex gap-3 overflow-x-auto pb-4 min-h-[calc(100vh-220px)]" style={{ scrollbarWidth: 'thin' }}>
+          {STAGES.map(({ key, label, color }) => {
+            const count = dealsByStage(key).length
             const value = stageValue(key)
             const stageDeals = dealsByStage(key)
 
             return (
-              <div key={key} className="flex-shrink-0 w-72">
-                <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-3 transition-all hover:border-white/20">
-                  {/* Column header */}
-                  <div className="flex items-center justify-between mb-3">
+              <div key={key} className="flex-shrink-0 w-[268px] flex flex-col">
+                {/* Column header */}
+                <div className="mb-2.5 px-1">
+                  <div className="flex items-center justify-between mb-1.5">
                     <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color, boxShadow: `0 0 8px ${color}` }} />
-                      <h3 className="text-sm font-semibold text-white">{label}</h3>
+                      <span
+                        className="h-2 w-2 rounded-full flex-shrink-0"
+                        style={{ background: color, boxShadow: `0 0 6px ${color}80` }}
+                      />
+                      <h3 className="text-[12px] font-semibold text-white/75 leading-none">{label}</h3>
                     </div>
-                    <Badge variant="secondary" className="text-xs bg-white/10 text-white/60 border-0">
+                    <span
+                      className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md leading-none"
+                      style={{
+                        background: count > 0 ? `${color}18` : 'rgba(255,255,255,0.05)',
+                        color: count > 0 ? color : 'rgba(255,255,255,0.3)',
+                      }}
+                    >
                       {count}
-                    </Badge>
+                    </span>
                   </div>
-
-                  {/* Column value */}
                   {value > 0 && (
-                    <div className="mb-3 px-3 py-1.5 bg-white/5 rounded-lg text-xs font-semibold text-white/50 flex items-center justify-between">
-                      <span>Valor</span>
-                      <span className="text-white">${(value / 1_000_000).toFixed(1)}M</span>
-                    </div>
+                    <p className="text-[11px] text-white/35 pl-4 tabular-nums">
+                      ${(value / 1_000_000).toFixed(1)}M
+                    </p>
                   )}
+                  {/* Stage color bar */}
+                  <div className="mt-2 h-[2px] rounded-full" style={{ background: `${color}35` }}>
+                    <div className="h-full rounded-full" style={{ width: count > 0 ? '100%' : '0%', background: color }} />
+                  </div>
+                </div>
 
-                  {/* Cards */}
+                {/* Drop zone */}
+                <div
+                  id={key}
+                  className={cn(
+                    'flex-1 rounded-xl border border-white/[0.06] p-2 min-h-[120px] transition-all duration-200',
+                    'bg-white/[0.02]',
+                  )}
+                >
                   <SortableContext items={stageDeals.map((d) => d.id)} strategy={verticalListSortingStrategy}>
-                    <div id={key} className="space-y-2.5 min-h-[80px]">
+                    <div className="space-y-2">
                       {stageDeals.map((deal) => (
                         <DealCard key={deal.id} deal={deal} onClick={() => setSelected(deal)} />
                       ))}
                     </div>
                   </SortableContext>
+
+                  {stageDeals.length === 0 && (
+                    <div className="flex items-center justify-center h-20">
+                      <div className="flex items-center gap-1.5 text-[11px] text-white/20">
+                        <Plus className="w-3.5 h-3.5" />
+                        Arrastra aquí
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )
@@ -266,14 +315,4 @@ export function KanbanBoard() {
       )}
     </div>
   )
-}
-
-function getTemperature(stage: DealStage): string {
-  const coldStages = ['PROSPECTO_IDENTIFICADO', 'SENAL_DETECTADA', 'PRIMER_CONTACTO']
-  const warmStages = ['EN_SECUENCIA', 'REUNION_AGENDADA']
-  const hotStages = ['PROPUESTA_ENVIADA', 'NEGOCIACION', 'GANADO']
-  if (coldStages.includes(stage)) return 'frio'
-  if (warmStages.includes(stage)) return 'tibio'
-  if (hotStages.includes(stage)) return 'caliente'
-  return 'perdido'
 }
