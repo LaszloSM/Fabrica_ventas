@@ -13,16 +13,16 @@ export default function ProspectsPage() {
   const [refreshKey, setRefreshKey] = useState(0)
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="p-6 max-w-6xl mx-auto">
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Prospectos</h1>
-          <p className="text-gray-500 mt-1">Gestión de empresas y contactos objetivo</p>
+          <h1 className="text-2xl font-bold text-[#1E293B]">Prospectos</h1>
+          <p className="text-sm text-[#64748B] mt-1">Gestión de empresas y contactos objetivo</p>
         </div>
         <Button
           variant="outline"
           onClick={() => setImportOpen(true)}
-          className="flex items-center gap-2 text-green-700 border-green-300"
+          className="flex items-center gap-2 text-[#1A7A4A] border-[#1A7A4A]/30 hover:bg-[#1A7A4A]/5"
         >
           <Download className="w-4 h-4" />
           Importar Google Sheets

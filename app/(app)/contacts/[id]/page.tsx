@@ -4,7 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ArrowLeft, Mail, Phone, Linkedin, Building2, MapPin, Calendar, FileText, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Mail, Phone, ExternalLink, Building2, MapPin, Calendar, FileText, CheckCircle } from 'lucide-react'
 import type { Contact, Prospect, Deal, Activity } from '@/types'
 
 interface ContactWithRelations extends Contact {
@@ -89,20 +89,22 @@ export default function ContactDetailPage() {
           </div>
           <div className="flex gap-2">
             {contact.email && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={`mailto:${contact.email}`}>
-                  <Mail className="w-4 h-4 mr-2" />
-                  Email
-                </a>
-              </Button>
+              <a
+                href={`mailto:${contact.email}`}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[0.8rem] font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                <Mail className="w-4 h-4" />
+                Email
+              </a>
             )}
             {contact.phone && (
-              <Button variant="outline" size="sm" asChild>
-                <a href={`tel:${contact.phone}`}>
-                  <Phone className="w-4 h-4 mr-2" />
-                  Llamar
-                </a>
-              </Button>
+              <a
+                href={`tel:${contact.phone}`}
+                className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-border bg-background px-2.5 py-1.5 text-[0.8rem] font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                <Phone className="w-4 h-4" />
+                Llamar
+              </a>
             )}
           </div>
         </div>
@@ -131,7 +133,7 @@ export default function ContactDetailPage() {
             <div>
               <p className="text-xs text-gray-500 mb-1">LinkedIn</p>
               <div className="flex items-center gap-1.5">
-                <Linkedin className="w-3.5 h-3.5 text-gray-400" />
+                <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
                 <a href={contact.linkedinUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline">
                   Ver perfil
                 </a>
@@ -223,7 +225,7 @@ export default function ContactDetailPage() {
                           ${(deal.value / 1_000_000).toFixed(1)}M
                         </p>
                       )}
-                      <Badge className="text-xs mt-1">{deal.probability}% prob.</Badge>
+                      <Badge className="text-xs mt-1">{stageProbability(deal.stage)}% prob.</Badge>
                     </div>
                   </div>
                 ))}
@@ -266,4 +268,19 @@ export default function ContactDetailPage() {
       </Tabs>
     </div>
   )
+}
+
+function stageProbability(stage: string): number {
+  switch (stage) {
+    case 'PROSPECTO_IDENTIFICADO': return 10
+    case 'SENAL_DETECTADA': return 20
+    case 'PRIMER_CONTACTO': return 30
+    case 'EN_SECUENCIA': return 40
+    case 'REUNION_AGENDADA': return 50
+    case 'PROPUESTA_ENVIADA': return 60
+    case 'NEGOCIACION': return 80
+    case 'GANADO': return 100
+    case 'PERDIDO': return 0
+    default: return 0
+  }
 }

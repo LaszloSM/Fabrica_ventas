@@ -20,12 +20,15 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around border-t border-gray-800 bg-gray-900 p-2 text-white md:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex justify-around border-t border-white/10 bg-[#2D2D2D] p-2 text-white md:hidden">
       {items.map(({ href, icon: Icon }) => (
         <Link
           key={href}
           href={href}
-          className={cn('rounded-lg p-2 transition-colors', pathname === href ? 'bg-green-600 text-white' : 'text-gray-400')}
+          className={cn(
+            'rounded-lg p-2 transition-colors',
+            pathname === href ? 'bg-[#F26522] text-white' : 'text-[#A1A1AA]'
+          )}
         >
           <Icon className="h-6 w-6" />
         </Link>

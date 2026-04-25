@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Plus, Trash2, UserCheck } from 'lucide-react'
+import { colors } from '@/lib/design-system'
+import { useToast } from '@/components/ui/Toast'
 
 interface TeamMember {
   id: string
@@ -14,6 +16,7 @@ interface TeamMember {
 }
 
 export function TeamSettings() {
+  const { toast } = useToast()
   const [members, setMembers] = useState<TeamMember[]>([])
   const [loading, setLoading] = useState(true)
   const [newName, setNewName] = useState('')
@@ -48,9 +51,12 @@ export function TeamSettings() {
         setNewName('')
         setNewEmail('')
         loadMembers()
+        toast('Vendedor agregado correctamente', 'success')
+      } else {
+        toast('Error al agregar vendedor', 'error')
       }
     } catch {
-      alert('Error al crear miembro')
+      toast('Error al agregar vendedor', 'error')
     } finally {
       setCreating(false)
     }
@@ -62,12 +68,13 @@ export function TeamSettings() {
       const res = await fetch(`/api/team/${id}`, { method: 'DELETE' })
       if (res.ok) {
         loadMembers()
+        toast('Vendedor eliminado', 'success')
       } else {
         const json = await res.json()
-        alert(json.detail || 'No se puede eliminar: tiene deals asignados')
+        toast(json.detail || 'No se puede eliminar: tiene deals asignados', 'error')
       }
     } catch {
-      alert('Error al eliminar')
+      toast('Error al eliminar', 'error')
     }
   }
 
@@ -78,7 +85,7 @@ export function TeamSettings() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-gray-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-[#94A3B8]" />
       </div>
     )
   }
@@ -86,22 +93,26 @@ export function TeamSettings() {
   return (
     <div className="space-y-6">
       {/* Crear nuevo */}
-      <div className="bg-white border rounded-lg p-4">
-        <h3 className="text-sm font-semibold text-gray-900 mb-3">Agregar nuevo vendedor</h3>
-        <div className="flex gap-3">
+      <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] p-4">
+        <h3 className="text-sm font-semibold text-[#1E293B] mb-3">Agregar nuevo vendedor</h3>
+        <div className="flex flex-col gap-3 sm:flex-row">
           <Input
             placeholder="Nombre"
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            className="flex-1"
+            className="flex-1 border-[#E2E8F0] focus-visible:ring-[#F26522]/30"
           />
           <Input
             placeholder="Email (opcional)"
             value={newEmail}
             onChange={(e) => setNewEmail(e.target.value)}
-            className="flex-1"
+            className="flex-1 border-[#E2E8F0] focus-visible:ring-[#F26522]/30"
           />
-          <Button onClick={createMember} disabled={creating || !newName.trim()}>
+          <Button
+            onClick={createMember}
+            disabled={creating || !newName.trim()}
+            className="bg-[#F26522] hover:bg-[#D5551A]"
+          >
             {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             Agregar
           </Button>
@@ -109,40 +120,46 @@ export function TeamSettings() {
       </div>
 
       {/* Lista */}
-      <div className="bg-white border rounded-lg overflow-hidden">
-        <div className="px-4 py-3 border-b bg-gray-50">
-          <h3 className="text-sm font-semibold text-gray-900">
+      <div className="rounded-xl border border-[#E2E8F0] bg-white overflow-hidden">
+        <div className="px-4 py-3 border-b border-[#E2E8F0] bg-[#F8FAFC]">
+          <h3 className="text-sm font-semibold text-[#1E293B]">
             Vendedores ({members.length})
           </h3>
         </div>
         {members.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">
-            <UserCheck className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-            <p>No hay vendedores registrados</p>
-            <p className="text-sm">Los vendedores se extraen automáticamente al importar datos</p>
+          <div className="p-8 text-center">
+            <UserCheck className="w-8 h-8 mx-auto mb-2 text-[#E2E8F0]" />
+            <p className="text-sm text-[#64748B]">No hay vendedores registrados</p>
+            <p className="text-xs text-[#94A3B8] mt-1">Los vendedores se extraen automáticamente al importar datos</p>
           </div>
         ) : (
-          <div className="divide-y">
+          <div className="divide-y divide-[#F1F5F9]">
             {members.map((member) => (
-              <div key={member.id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50">
+              <div key={member.id} className="flex items-center justify-between px-4 py-3 hover:bg-[#F8FAFC] transition-colors">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-green-100 text-green-700 flex items-center justify-center text-sm font-medium">
+                  <div
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white"
+                    style={{ backgroundColor: colors.primary }}
+                  >
                     {member.name.charAt(0).toUpperCase()}
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{member.name}</p>
-                    {member.email && <p className="text-xs text-gray-500">{member.email}</p>}
+                    <p className="text-sm font-medium text-[#1E293B]">{member.name}</p>
+                    {member.email && <p className="text-xs text-[#94A3B8]">{member.email}</p>}
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant={member.role === 'ADMIN' ? 'default' : 'secondary'} className="text-xs">
+                  <Badge
+                    variant="secondary"
+                    className="text-[10px] bg-[#F1F5F9] text-[#64748B] border-0"
+                  >
                     {member.role === 'SALES_REP' ? 'Vendedor' : member.role}
                   </Badge>
                   <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => deleteMember(member.id)}
-                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                    className="text-[#DC2626] hover:text-[#B91C1C] hover:bg-[#FEF2F2] h-8 w-8 p-0"
                   >
                     <Trash2 className="w-4 h-4" />
                   </Button>

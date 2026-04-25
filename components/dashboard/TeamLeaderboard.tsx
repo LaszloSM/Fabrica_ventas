@@ -1,6 +1,5 @@
 'use client'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import { colors, shadows } from '@/lib/design-system'
 
 interface LeaderboardEntry {
   name: string
@@ -9,32 +8,69 @@ interface LeaderboardEntry {
   deals: number
 }
 
+const MEDAL_COLORS = ['#F26522', '#64748B', '#D97706']
+
+function getInitials(name: string) {
+  return name
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+}
+
 export function TeamLeaderboard({ data }: { data: LeaderboardEntry[] }) {
-  const medals = ['🥇', '🥈', '🥉']
+  const maxPipeline = Math.max(...data.map((d) => d.pipeline), 1)
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Vendedor</TableHead>
-          <TableHead className="text-right">Deals Activos</TableHead>
-          <TableHead className="text-right">Pipeline ($)</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {data.map((entry, i) => (
-          <TableRow key={entry.name}>
-            <TableCell className="font-medium">
-              <div className="flex items-center gap-2">
-                {medals[i] && <span>{medals[i]}</span>}
-                {entry.name}
+    <div className="space-y-3">
+      {data.map((entry, i) => {
+        const barWidth = (entry.pipeline / maxPipeline) * 100
+        return (
+          <div
+            key={entry.name}
+            className="flex items-center gap-3 rounded-lg border border-[#E2E8F0] bg-white p-3 transition-all hover:shadow-sm"
+            style={{ boxShadow: shadows.sm }}
+          >
+            {/* Rank */}
+            <div
+              className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white"
+              style={{
+                backgroundColor: i < 3 ? MEDAL_COLORS[i] : colors.border,
+              }}
+            >
+              {i + 1}
+            </div>
+
+            {/* Avatar */}
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F1F5F9] text-xs font-semibold text-[#64748B]">
+              {getInitials(entry.name)}
+            </div>
+
+            {/* Info */}
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-[#1E293B] truncate">{entry.name}</p>
+              <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[#F1F5F9]">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{
+                    width: `${barWidth}%`,
+                    backgroundColor: i < 3 ? MEDAL_COLORS[i] : colors.primary,
+                  }}
+                />
               </div>
-            </TableCell>
-            <TableCell className="text-right">{entry.deals ?? 0}</TableCell>
-            <TableCell className="text-right">${(entry.pipeline ?? 0).toLocaleString()}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+            </div>
+
+            {/* Stats */}
+            <div className="text-right">
+              <p className="text-sm font-semibold text-[#1E293B]">
+                ${(entry.pipeline / 1_000_000).toFixed(1)}M
+              </p>
+              <p className="text-[10px] text-[#94A3B8]">{entry.deals ?? 0} deals</p>
+            </div>
+          </div>
+        )
+      })}
+    </div>
   )
 }

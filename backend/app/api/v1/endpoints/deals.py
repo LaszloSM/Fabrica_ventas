@@ -54,12 +54,16 @@ async def list_deals(
     db=Depends(get_db)
 ):
     deals, total = await service.list_deals(skip, limit, stage, owner, line)
+    print(f"[DEBUG] list_deals: found {len(deals)} deals, total={total}")
     prospect_svc = ProspectService(db)
     items = []
     for deal in deals:
         d = deal.model_dump(by_alias=True)
         prospect = await prospect_svc.get_prospect(deal.prospectId)
-        items.append(_enrich(d, prospect))
+        enriched = _enrich(d, prospect)
+        print(f"[DEBUG] enriched deal: id={enriched.get('id')}, stage={enriched.get('stage')}, prospect={enriched.get('prospect')}")
+        items.append(enriched)
+    print(f"[DEBUG] returning {len(items)} items")
     return {"data": items, "total": total}
 
 @router.get("/aging/")
