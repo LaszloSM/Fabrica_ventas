@@ -8,8 +8,8 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Activity, CheckCircle, Mail, Phone, User, FileText,
-  Calendar, DollarSign, UserCircle, Tag, Flame, TrendingUp,
-  Building2, MapPin, X
+  UserCircle, Tag,
+  Building2, MapPin
 } from 'lucide-react'
 import type { DealWithRelations } from '@/types'
 import { ActivityType } from '@/types'
@@ -30,6 +30,8 @@ const activityConfig: Record<string, { icon: React.ElementType; color: string; b
 
 export function DealDrawer({ deal, onClose, onUpdate }: DealDrawerProps) {
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [editedDeal, setEditedDeal] = useState<DealWithRelations>(deal)
   const [activity, setActivity] = useState<{ type: ActivityType; notes: string }>({
     type: ActivityType.NOTE,
     notes: '',
@@ -64,6 +66,25 @@ export function DealDrawer({ deal, onClose, onUpdate }: DealDrawerProps) {
     }
   }
 
+  async function saveDeal() {
+    setSaving(true)
+    try {
+      const res = await fetch(`/api/deals/${deal.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editedDeal),
+      })
+      if (res.ok) {
+        const json = await res.json()
+        onUpdate({ ...editedDeal, ...(json.data || {}) })
+      }
+    } catch {
+      // silently fail
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const sortedActivities = [...(deal.activities || [])].sort(
     (a, b) => new Date(b.doneAt || b.createdAt).getTime() - new Date(a.doneAt || a.createdAt).getTime()
   )
@@ -82,19 +103,8 @@ export function DealDrawer({ deal, onClose, onUpdate }: DealDrawerProps) {
                 <Badge className="text-[10px] border-0 bg-gradient-to-r from-[#f26522]/20 to-[#d5551a]/20 text-[#f26522]">
                   {deal.stage?.replace(/_/g, ' ')}
                 </Badge>
-                {deal.value && (
-                  <Badge className="text-[10px] border-0 bg-emerald-500/20 text-emerald-400">
-                    ${deal.value.toLocaleString()}
-                  </Badge>
-                )}
               </div>
             </div>
-            {deal.value && (
-              <div className="text-right flex-shrink-0">
-                <p className="text-lg font-bold text-emerald-400">${deal.value.toLocaleString()}</p>
-                <p className="text-[10px] text-white/40">Valor del deal</p>
-              </div>
-            )}
           </div>
         </DialogHeader>
 
@@ -165,10 +175,6 @@ export function DealDrawer({ deal, onClose, onUpdate }: DealDrawerProps) {
                     <p className="font-medium text-white">{deal.stage?.replace(/_/g, ' ')}</p>
                   </div>
                   <div>
-                    <p className="text-white/30 text-xs mb-0.5">Valor</p>
-                    <p className="font-medium text-emerald-400">${deal.value?.toLocaleString() || 0}</p>
-                  </div>
-                  <div>
                     <p className="text-white/30 text-xs mb-0.5">Responsable</p>
                     <p className="font-medium text-white">{assignedName}</p>
                   </div>
@@ -176,6 +182,23 @@ export function DealDrawer({ deal, onClose, onUpdate }: DealDrawerProps) {
                     <p className="text-white/30 text-xs mb-0.5">Región</p>
                     <p className="font-medium text-white">{deal.region || '—'}</p>
                   </div>
+                </div>
+                <div className="mt-4 space-y-1">
+                  <label className="text-[11px] text-white/40 uppercase tracking-wider font-semibold">Proyectos</label>
+                  <textarea
+                    value={editedDeal?.proyectos || ''}
+                    onChange={(e) => setEditedDeal(prev => prev ? {...prev, proyectos: e.target.value} : prev)}
+                    placeholder="Ej: Pescadores Pájaro, Tienda virtual 2.0..."
+                    rows={2}
+                    className="w-full text-sm text-white/80 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2 resize-none focus:outline-none focus:border-white/20 placeholder:text-white/20"
+                  />
+                  <button
+                    onClick={saveDeal}
+                    disabled={saving}
+                    className="mt-2 text-xs px-3 py-1.5 rounded-lg bg-[#f26522]/20 text-[#f26522] hover:bg-[#f26522]/30 transition-colors disabled:opacity-50"
+                  >
+                    {saving ? 'Guardando...' : 'Guardar cambios'}
+                  </button>
                 </div>
               </div>
 
