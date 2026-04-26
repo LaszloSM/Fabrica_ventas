@@ -7,12 +7,9 @@ import { TeamSettings } from '@/components/settings/TeamSettings'
 import { UserSettings } from '@/components/settings/UserSettings'
 import { useTheme } from '@/components/theme/ThemeProvider'
 import { Button } from '@/components/ui/button'
-import { useSession } from 'next-auth/react'
 
 export default function SettingsPage() {
   const { theme, toggleTheme } = useTheme()
-  const { data: session } = useSession()
-  const isAdmin = session?.user?.role === 'ADMIN'
 
   return (
     <div className="p-7 max-w-5xl mx-auto">
@@ -57,15 +54,13 @@ export default function SettingsPage() {
             <Users className="w-4 h-4" />
             Usuarios del Sistema
           </TabsTrigger>
-          {isAdmin && (
-            <TabsTrigger
-              value="data"
-              className="flex items-center gap-2 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-[#f26522] text-white/50 rounded-lg transition-all"
-            >
-              <Database className="w-4 h-4" />
-              Datos
-            </TabsTrigger>
-          )}
+          <TabsTrigger
+            value="data"
+            className="flex items-center gap-2 text-xs data-[state=active]:bg-white/10 data-[state=active]:text-[#f26522] text-white/50 rounded-lg transition-all"
+          >
+            <Database className="w-4 h-4" />
+            Datos
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="team">
@@ -80,17 +75,15 @@ export default function SettingsPage() {
           </div>
         </TabsContent>
 
-        {isAdmin && (
-          <TabsContent value="data">
-            <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
-              <h2 className="text-lg font-semibold text-white mb-1">Base de Datos</h2>
-              <p className="text-sm text-white/50 mb-6">
-                Sincroniza los contactos del Google Sheet de CoimpactoB. La sincronización hace upsert — no borra datos registrados manualmente.
-              </p>
-              <SyncDataPanel />
-            </div>
-          </TabsContent>
-        )}
+        <TabsContent value="data">
+          <div className="rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm p-6">
+            <h2 className="text-lg font-semibold text-white mb-1">Base de Datos</h2>
+            <p className="text-sm text-white/50 mb-6">
+              Sincroniza los contactos del Google Sheet de CoimpactoB. La sincronización hace upsert — no borra datos registrados manualmente.
+            </p>
+            <SyncDataPanel />
+          </div>
+        </TabsContent>
       </Tabs>
     </div>
   )
