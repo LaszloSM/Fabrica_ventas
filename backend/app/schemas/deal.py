@@ -17,6 +17,8 @@ class DealCreate(BaseModel):
     nextAction: Optional[str] = Field(None, max_length=500)
     nextActionDate: Optional[datetime] = None
     assignedTo: Optional[str] = None
+    proyectos: Optional[str] = None
+    sourceTab: Optional[str] = None
 
 class DealUpdate(BaseModel):
     stage: Optional[str] = None
@@ -27,6 +29,7 @@ class DealUpdate(BaseModel):
     nextActionDate: Optional[datetime] = None
     notes: Optional[str] = None
     assignedTo: Optional[str] = None
+    proyectos: Optional[str] = None
 
 class DealResponse(BaseModel):
     id: str

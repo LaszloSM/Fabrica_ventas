@@ -152,6 +152,8 @@ export interface Deal {
   region?: string | null
   lostReason?: string | null
   wonAt?: string | null
+  proyectos?: string | null
+  sourceTab?: string | null
   createdAt: string
   updatedAt: string
 }
