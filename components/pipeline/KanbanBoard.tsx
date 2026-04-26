@@ -111,8 +111,6 @@ export function KanbanBoard() {
   }, [deals, searchQuery, filterAssignedTo, filterTemperature])
 
   const dealsByStage = (stage: DealStage) => filteredDeals.filter((d) => d.stage === stage)
-  const stageValue = (stage: DealStage) => dealsByStage(stage).reduce((sum, d) => sum + (d.value || 0), 0)
-  const totalValue = filteredDeals.reduce((sum, d) => sum + (d.value || 0), 0)
   const hasActiveFilters = searchQuery || filterAssignedTo || filterTemperature
 
   if (loading) {
@@ -180,11 +178,6 @@ export function KanbanBoard() {
           <span className="text-white/40">
             <span className="font-semibold text-white">{filteredDeals.length}</span> deals
           </span>
-          {totalValue > 0 && (
-            <span className="text-white/40">
-              <span className="font-semibold text-emerald-400">${(totalValue / 1_000_000).toFixed(1)}M</span> total
-            </span>
-          )}
         </div>
       </div>
 
@@ -236,7 +229,6 @@ export function KanbanBoard() {
         <div className="flex gap-3 overflow-x-auto pb-4 min-h-[calc(100vh-220px)]" style={{ scrollbarWidth: 'thin' }}>
           {STAGES.map(({ key, label, color }) => {
             const count = dealsByStage(key).length
-            const value = stageValue(key)
             const stageDeals = dealsByStage(key)
 
             return (
@@ -261,11 +253,6 @@ export function KanbanBoard() {
                       {count}
                     </span>
                   </div>
-                  {value > 0 && (
-                    <p className="text-[11px] text-white/35 pl-4 tabular-nums">
-                      ${(value / 1_000_000).toFixed(1)}M
-                    </p>
-                  )}
                   {/* Stage color bar */}
                   <div className="mt-2 h-[2px] rounded-full" style={{ background: `${color}35` }}>
                     <div className="h-full rounded-full" style={{ width: count > 0 ? '100%' : '0%', background: color }} />

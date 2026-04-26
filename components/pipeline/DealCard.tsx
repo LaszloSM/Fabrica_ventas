@@ -91,7 +91,7 @@ export function DealCard({ deal, onClick }: DealCardProps) {
       )}
 
       <div className="p-3">
-        {/* Top: Avatar + name + value */}
+        {/* Top: Avatar + name */}
         <div className="flex items-start gap-2">
           {/* Avatar */}
           <div
@@ -110,13 +110,6 @@ export function DealCard({ deal, onClick }: DealCardProps) {
               <p className="text-[11px] text-white/40 truncate mt-0.5 leading-tight">{contactName}</p>
             )}
           </div>
-
-          {/* Value */}
-          {deal.value ? (
-            <span className="text-[12px] font-bold text-emerald-400 flex-shrink-0 tabular-nums">
-              ${(deal.value / 1_000_000).toFixed(1)}M
-            </span>
-          ) : null}
         </div>
 
         {/* Service + temp badges */}
@@ -135,6 +128,13 @@ export function DealCard({ deal, onClick }: DealCardProps) {
             {tc.label}
           </span>
         </div>
+
+        {/* Proyectos */}
+        {deal.proyectos && (
+          <p className="text-[10px] text-white/30 mt-1.5 truncate leading-tight italic">
+            {deal.proyectos}
+          </p>
+        )}
 
         {/* Footer: assigned + stale */}
         <div className="flex items-center justify-between mt-2.5">
