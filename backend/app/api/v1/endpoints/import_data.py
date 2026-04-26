@@ -4,14 +4,18 @@ Solo disponible si ENABLE_IMPORT=True en .env.local (seguridad).
 """
 import csv
 import io
+import logging
 import re
 import uuid
 from datetime import datetime
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from app.database import get_db
 from app.config import settings
+from app.services.import_service import ImportService
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/import", tags=["import"])
 
@@ -20,6 +24,17 @@ SHEET_URL = (
     "178okj8F_HoRh868plz1NJgePKOiRIZlPAFu_okw_fVA"
     "/export?format=csv&gid=456943491"
 )
+
+SHEET_BASE = "https://docs.google.com/spreadsheets/d/178okj8F_HoRh868plz1NJgePKOiRIZlPAFu_okw_fVA/export?format=csv&gid="
+
+SHEET_TABS = {
+    "2026":           "456943491",
+    "Base 2025":      "0",
+    "Banca caliente": None,
+    "Banca frio":     None,
+    "CAF":            None,
+    "Airtable":       None,
+}
 
 STAGE_MAP = {
     "frio": "PRIMER_CONTACTO",
@@ -254,6 +269,39 @@ async def import_from_sheet(db=Depends(get_db)):  # noqa: C901
             "totalRows": len(rows),
         }
     }
+
+
+@router.post("/from-sheets")
+async def import_from_google_sheets(
+    force: bool = Query(False, description="Limpiar datos antes de importar"),
+    db=Depends(get_db)
+):
+    """
+    Descarga todos los tabs del Google Sheet de CoimpactoB e importa a MongoDB.
+    Hace upsert — no borra datos manuales existentes a menos que force=True.
+    """
+    file_contents = {}
+
+    async with httpx.AsyncClient(timeout=60, follow_redirects=True) as client:
+        for tab_name, gid in SHEET_TABS.items():
+            if gid is None:
+                continue
+            url = f"{SHEET_BASE}{gid}"
+            try:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                filename = f"{tab_name}.csv"
+                file_contents[filename] = resp.text
+            except Exception as e:
+                logger.warning(f"No se pudo descargar tab '{tab_name}': {e}")
+
+    if not file_contents:
+        raise HTTPException(status_code=503, detail="No se pudo conectar a Google Sheets")
+
+    service = ImportService(db)
+    result = await service.import_from_files(file_contents, force=force)
+
+    return {"data": result, "tabs_downloaded": list(file_contents.keys())}
 
 
 @router.delete("")
