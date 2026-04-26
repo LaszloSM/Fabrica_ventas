@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import {
   FileSpreadsheet, FileText, TrendingUp, TrendingDown,
-  DollarSign, Target, Users, AlertTriangle, Activity,
+  Target, Users, AlertTriangle, Activity, Thermometer,
   Mail, Phone, Calendar, FileText as FileTextIcon, Link2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -34,16 +34,26 @@ interface ActivityItem {
   date: string
 }
 
+interface FunnelStage {
+  stage: string
+  label: string
+  count: number
+}
+
 interface MetricsData {
   summary: {
-    totalPipeline: number
     totalDeals: number
     won: number
     lost: number
   }
+  funnel: FunnelStage[]
   goals: Goal[]
   leaderboard: any[]
 }
+
+const COLD_STAGES = new Set(['PROSPECTO_IDENTIFICADO', 'PRIMER_CONTACTO'])
+const WARM_STAGES = new Set(['EN_SECUENCIA', 'SENAL_DETECTADA'])
+const HOT_STAGES = new Set(['REUNION_AGENDADA', 'PROPUESTA_ENVIADA', 'NEGOCIACION'])
 
 const SERVICE_COLORS: Record<string, string> = {
   CREDIMPACTO_GRUPOS: '#F26522',
@@ -165,7 +175,7 @@ export default function DashboardPage() {
       .catch(() => {})
   }, [])
 
-  if (error) {
+  if (!metrics && error) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-6 text-center backdrop-blur-sm">
@@ -189,48 +199,45 @@ export default function DashboardPage() {
   }
 
   const summary = metrics.summary || {}
-  const totalGoalsTarget = metrics.goals.reduce(
-    (sum: number, g: any) => sum + (g.targetValue || 0),
-    0
-  )
-  const pipelinePercent = totalGoalsTarget > 0
-    ? (summary.totalPipeline / totalGoalsTarget) * 100
-    : 0
+  const funnel: FunnelStage[] = metrics.funnel || []
+
+  const countByTemp = (stages: Set<string>) =>
+    funnel.filter((f) => stages.has(f.stage)).reduce((s, f) => s + f.count, 0)
+
+  const calientes = countByTemp(HOT_STAGES)
+  const tibios = countByTemp(WARM_STAGES)
+  const frios = countByTemp(COLD_STAGES)
 
   const kpiData: KpiData[] = [
     {
-      title: 'Pipeline Total',
-      value: `$${(summary.totalPipeline / 1_000_000).toFixed(1)}M`,
-      subtitle: `${summary.totalDeals || 0} deals activos`,
-      icon: DollarSign,
+      title: 'Total Contactos',
+      value: summary.totalDeals || 0,
+      subtitle: 'Deals activos en pipeline',
+      icon: Users,
       color: '#f26522',
       colorDim: 'rgba(242,101,34,0.12)',
     },
     {
-      title: 'Deals Ganados',
-      value: summary.won || 0,
-      subtitle: 'Este año',
-      icon: Target,
-      color: '#10b981',
-      colorDim: 'rgba(16,185,129,0.12)',
-      trend: 'up',
-      trendVal: '+12%',
-    },
-    {
-      title: 'Deals Perdidos',
-      value: summary.lost || 0,
-      subtitle: 'Este año',
-      icon: TrendingDown,
+      title: 'Calientes',
+      value: calientes,
+      subtitle: 'Reunión · Propuesta · Negociación',
+      icon: Thermometer,
       color: '#ef4444',
       colorDim: 'rgba(239,68,68,0.12)',
-      trend: 'down',
-      trendVal: '-5%',
     },
     {
-      title: 'Equipo Activo',
-      value: metrics.leaderboard?.length || 0,
-      subtitle: 'Vendedores',
-      icon: Users,
+      title: 'Tibios',
+      value: tibios,
+      subtitle: 'En Secuencia · Señal Detectada',
+      icon: Activity,
+      color: '#f59e0b',
+      colorDim: 'rgba(245,158,11,0.12)',
+    },
+    {
+      title: 'Fríos',
+      value: frios,
+      subtitle: 'Prospecto · Primer Contacto',
+      icon: Target,
       color: '#3b82f6',
       colorDim: 'rgba(59,130,246,0.12)',
     },
@@ -265,30 +272,6 @@ export default function DashboardPage() {
         {kpiData.map((kpi, i) => (
           <MetricCard key={kpi.title} kpi={kpi} index={i} />
         ))}
-      </div>
-
-      {/* Annual progress */}
-      <div className="rounded-xl border border-white/[0.07] bg-white/[0.025] p-6 backdrop-blur-sm">
-        <div className="flex items-baseline justify-between mb-4">
-          <div>
-            <h2 className="text-[15px] font-semibold text-white">Meta Anual</h2>
-            <p className="text-xs text-white/35 mt-1">
-              ${(summary.totalPipeline / 1_000_000).toFixed(1)}M de ${(totalGoalsTarget / 1_000_000).toFixed(1)}M — Progreso acumulado
-            </p>
-          </div>
-          <span className="text-[28px] font-bold text-[#f26522] tabular-nums" style={{ fontFamily: 'var(--font-dm-serif), Georgia, serif' }}>
-            {Math.round(pipelinePercent)}%
-          </span>
-        </div>
-        <div className="h-2.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
-          <div
-            className="h-full rounded-full transition-all duration-1000 ease-out"
-            style={{
-              width: `${Math.min(pipelinePercent, 100)}%`,
-              background: 'linear-gradient(90deg, #f26522, #c44e18)',
-            }}
-          />
-        </div>
       </div>
 
       {/* Two-column: Goals + Activity */}
