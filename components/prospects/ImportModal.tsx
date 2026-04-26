@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog'
-import { AlertTriangle, CheckCircle, Database, Loader2, Trash2, Upload } from 'lucide-react'
+import { AlertTriangle, CheckCircle, Database, Download, Loader2, Trash2, Upload } from 'lucide-react'
 
 interface ImportStats {
   prospects: number
@@ -39,7 +39,28 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
   const [error, setError] = useState<string | null>(null)
   const [force, setForce] = useState(false)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+  const [syncing, setSyncing] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function handleSyncFromSheets() {
+    setSyncing(true)
+    setError(null)
+    try {
+      const res = await fetch('/api/import/from-sheets', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.detail || json.error || 'Error al sincronizar')
+      } else {
+        setResult(json.data)
+        onDone()
+        checkStatus()
+      }
+    } catch {
+      setError('No se pudo conectar al servidor')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   async function checkStatus() {
     setChecking(true)
@@ -261,6 +282,24 @@ export function ImportModal({ open, onClose, onDone }: ImportModalProps) {
                 </label>
               </div>
             )}
+
+            <button
+              onClick={handleSyncFromSheets}
+              disabled={loading || syncing}
+              className="w-full flex items-center justify-center gap-2 h-10 rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 text-sm font-medium transition-all disabled:opacity-50"
+            >
+              {syncing ? (
+                <><Loader2 className="w-4 h-4 animate-spin" /> Sincronizando...</>
+              ) : (
+                <><Download className="w-4 h-4" /> Sincronizar desde Google Sheets</>
+              )}
+            </button>
+
+            <div className="flex items-center gap-2 text-white/20">
+              <div className="flex-1 h-px bg-white/10" />
+              <span className="text-xs">o sube archivos CSV</span>
+              <div className="flex-1 h-px bg-white/10" />
+            </div>
 
             <Button
               onClick={handleImport}
