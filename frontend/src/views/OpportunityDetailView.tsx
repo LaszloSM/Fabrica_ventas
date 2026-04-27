@@ -28,12 +28,12 @@ export function OpportunityDetailView({ id, onBack }: Props) {
 
   const loadActivities = () =>
     api.get(`/activities?dealId=${id}`).then(d => {
-      if (d) setActivities(Array.isArray(d) ? d : d.activities ?? [])
+      if (d) setActivities(Array.isArray(d) ? d : d.data ?? [])
     })
 
   useEffect(() => {
     if (!id) return
-    api.get(`/deals/${id}`).then(d => d && setDeal(d))
+    api.get(`/deals/${id}`).then(d => d && setDeal(d.data ?? d))
     loadActivities()
   }, [id])
 

@@ -77,7 +77,7 @@ function UsersTab() {
 
   useEffect(() => {
     api.get('/users').then(d => {
-      if (d) setUsers(Array.isArray(d) ? d : d.users ?? [])
+      if (d) setUsers(Array.isArray(d) ? d : d.data ?? [])
       setLoading(false)
     })
   }, [])

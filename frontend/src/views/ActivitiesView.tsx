@@ -25,7 +25,7 @@ export function ActivitiesView() {
 
   useEffect(() => {
     api.get('/activities').then(d => {
-      if (d) setActivities(Array.isArray(d) ? d : d.activities ?? [])
+      if (d) setActivities(Array.isArray(d) ? d : d.data ?? [])
       setLoading(false)
     })
   }, [])

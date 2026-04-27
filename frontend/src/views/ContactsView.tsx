@@ -8,7 +8,7 @@ export function ContactsView() {
 
   useEffect(() => {
     api.get('/contacts').then(d => {
-      if (d) setContacts(Array.isArray(d) ? d : d.contacts ?? [])
+      if (d) setContacts(Array.isArray(d) ? d : d.data ?? [])
       setLoading(false)
     })
   }, [])

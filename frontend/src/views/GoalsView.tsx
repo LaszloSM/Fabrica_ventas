@@ -28,7 +28,7 @@ export function GoalsView() {
 
   useEffect(() => {
     api.get('/metrics').then(d => {
-      if (d) setGoals(d.goals ?? [])
+      if (d) setGoals(d.data?.goals ?? [])
       setLoading(false)
     })
   }, [])

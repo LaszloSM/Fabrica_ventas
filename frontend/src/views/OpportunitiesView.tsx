@@ -31,7 +31,7 @@ export function OpportunitiesView({ onDealClick, onNewDeal }: Props) {
 
   useEffect(() => {
     api.get('/deals').then(d => {
-      if (d) setDeals(Array.isArray(d) ? d : d.deals ?? [])
+      if (d) setDeals(Array.isArray(d) ? d : d.data ?? [])
       setLoading(false)
     })
   }, [])

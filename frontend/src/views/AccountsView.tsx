@@ -8,7 +8,7 @@ export function AccountsView() {
 
   useEffect(() => {
     api.get('/prospects').then(d => {
-      if (d) setAccounts(Array.isArray(d) ? d : d.prospects ?? [])
+      if (d) setAccounts(Array.isArray(d) ? d : d.data ?? [])
       setLoading(false)
     })
   }, [])
