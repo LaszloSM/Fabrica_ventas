@@ -42,7 +42,7 @@ function AppShell() {
     pipeline: <PipelineView key={refreshKey} onDealClick={goToDetail} />,
     opportunities: <OpportunitiesView key={refreshKey} onDealClick={goToDetail} onNewDeal={() => setModalOpen(true)} />,
     'opportunity-detail': <OpportunityDetailView id={selectedDealId!} onBack={() => setView('opportunities')} />,
-    accounts: <AccountsView key={refreshKey} />,
+    accounts: <AccountsView key={refreshKey} onDealClick={goToDetail} />,
     contacts: <ContactsView key={refreshKey} />,
     activities: <ActivitiesView key={refreshKey} />,
     goals: <GoalsView key={refreshKey} />,

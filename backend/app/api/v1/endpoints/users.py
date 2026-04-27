@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query, Request, HTTPException
+from fastapi import APIRouter, Depends, Query, Request, HTTPException, Body
 from app.database import get_db
 from datetime import datetime
 import uuid
@@ -25,11 +25,19 @@ async def get_or_create_me(req: Request, db=Depends(get_db)):
     users_col = db["users"]
     user = await users_col.find_one({"email": email})
     if user:
-        return {"role": user.get("role", "SALES"), "id": str(user.get("_id", email))}
+        existing_role = user.get("role", "SALES")
+        # Auto-promote if no ADMIN exists
+        if existing_role != "ADMIN":
+            admin_count = await users_col.count_documents({"role": "ADMIN"})
+            if admin_count == 0:
+                await users_col.update_one({"_id": user["_id"]}, {"$set": {"role": "ADMIN"}})
+                existing_role = "ADMIN"
+        return {"role": existing_role, "id": str(user.get("_id", email))}
 
-    # First user becomes ADMIN
+    # First user (or no admin) becomes ADMIN
     count = await users_col.count_documents({})
-    role = "ADMIN" if count == 0 else "SALES"
+    admin_count = await users_col.count_documents({"role": "ADMIN"})
+    role = "ADMIN" if count == 0 or admin_count == 0 else "SALES"
     name_clean = name or email.split("@")[0].replace(".", " ").replace("_", " ").title()
 
     await users_col.insert_one({
@@ -163,3 +171,47 @@ async def sync_users_to_team(db=Depends(get_db)):
         created += 1
     
     return {"data": {"created": created, "skipped": skipped}}
+
+
+@router.patch("/{user_id}/role")
+async def update_user_role(
+    user_id: str,
+    req: Request,
+    db=Depends(get_db),
+    role: str = Body(..., embed=True),
+):
+    """Update a user's role. Only an ADMIN can call this."""
+    requester_email = req.headers.get("x-user-email", "")
+    requester = await db["users"].find_one({"email": requester_email})
+    if not requester or requester.get("role") != "ADMIN":
+        raise HTTPException(status_code=403, detail="Solo un ADMIN puede cambiar roles")
+
+    valid_roles = {"ADMIN", "SALES", "VIEWER"}
+    if role not in valid_roles:
+        raise HTTPException(status_code=400, detail=f"Rol inválido. Opciones: {valid_roles}")
+
+    # user_id is the email (_id in our schema)
+    result = await db["users"].update_one(
+        {"_id": user_id},
+        {"$set": {"role": role, "updatedAt": datetime.utcnow()}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+    return {"data": {"id": user_id, "role": role}}
+
+
+@router.post("/ensure-admin")
+async def ensure_admin(db=Depends(get_db)):
+    """Promotes the earliest user to ADMIN if no admin exists. Safe to call multiple times."""
+    users_col = db["users"]
+    admin_count = await users_col.count_documents({"role": "ADMIN"})
+    if admin_count > 0:
+        return {"data": {"action": "none", "message": "Ya existe un administrador"}}
+
+    # Promote earliest user by createdAt
+    first = await users_col.find_one({}, sort=[("createdAt", 1)])
+    if not first:
+        return {"data": {"action": "none", "message": "No hay usuarios en el sistema"}}
+
+    await users_col.update_one({"_id": first["_id"]}, {"$set": {"role": "ADMIN"}})
+    return {"data": {"action": "promoted", "email": first.get("email"), "message": "Usuario promovido a ADMIN"}}
