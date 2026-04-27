@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { ArrowLeft, Plus, Building2, Globe, MapPin, StickyNote } from 'lucide-react'
 import { api } from '../lib/api'
+import { ActivityModal } from '../components/modals/ActivityModal'
 
 const STAGE_LABELS: Record<string, string> = {
   PROSPECTO_IDENTIFICADO: 'Prospecto',
@@ -14,6 +15,12 @@ const STAGE_LABELS: Record<string, string> = {
   PERDIDO: 'Perdido',
 }
 
+const ALL_STAGES = [
+  'PROSPECTO_IDENTIFICADO', 'SENAL_DETECTADA', 'PRIMER_CONTACTO',
+  'EN_SECUENCIA', 'REUNION_AGENDADA', 'PROPUESTA_ENVIADA',
+  'NEGOCIACION', 'GANADO', 'PERDIDO',
+]
+
 const ACT_ICON_LABELS: Record<string, string> = {
   EMAIL: '✉', CALL: '📞', MEETING: '🤝', LINKEDIN: 'in', NOTE: '📝',
 }
@@ -25,6 +32,8 @@ export function OpportunityDetailView({ id, onBack }: Props) {
   const [activities, setActivities] = useState<any[]>([])
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
+  const [activityModal, setActivityModal] = useState(false)
+  const [moving, setMoving] = useState(false)
 
   const loadActivities = () =>
     api.get(`/activities?dealId=${id}`).then(d => {
@@ -46,6 +55,13 @@ export function OpportunityDetailView({ id, onBack }: Props) {
     setSaving(false)
   }
 
+  const moveStage = async (newStage: string) => {
+    setMoving(true)
+    const res = await api.post(`/deals/${id}/move-stage`, { stage: newStage })
+    if (res) setDeal((prev: any) => ({ ...prev, stage: newStage }))
+    setMoving(false)
+  }
+
   if (!deal) return (
     <div className="flex items-center justify-center h-64 text-on-surface-variant">Cargando...</div>
   )
@@ -62,14 +78,24 @@ export function OpportunityDetailView({ id, onBack }: Props) {
         >
           <ArrowLeft size={24} />
         </button>
-        <div>
-          <div className="flex items-center gap-3">
+        <div className="flex-1">
+          <div className="flex items-center gap-3 flex-wrap">
             <h2 className="text-3xl font-bold text-on-surface">
               {(deal.serviceType ?? '').replace(/_/g, ' ')}
             </h2>
             <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-100">
               {STAGE_LABELS[deal.stage] ?? deal.stage}
             </span>
+            <select
+              value={deal.stage}
+              onChange={e => moveStage(e.target.value)}
+              disabled={moving}
+              className="text-xs border border-outline-variant rounded-lg px-2 py-1 bg-surface focus:outline-none focus:border-brand-primary-container disabled:opacity-50"
+            >
+              {ALL_STAGES.map(s => (
+                <option key={s} value={s}>{STAGE_LABELS[s] ?? s}</option>
+              ))}
+            </select>
           </div>
           <p className="text-on-surface-variant mt-1">{prospect.name ?? '—'}</p>
         </div>
@@ -98,7 +124,10 @@ export function OpportunityDetailView({ id, onBack }: Props) {
           <div className="glass-card">
             <div className="p-6 border-b border-outline-variant flex justify-between items-center">
               <h3 className="font-bold text-lg">Línea de Tiempo</h3>
-              <button className="flex items-center gap-1 text-brand-primary-container text-sm font-bold">
+              <button
+                onClick={() => setActivityModal(true)}
+                className="flex items-center gap-1 text-brand-primary-container text-sm font-bold hover:opacity-80 transition-opacity"
+              >
                 <Plus size={16} /> Nueva Actividad
               </button>
             </div>
@@ -190,6 +219,14 @@ export function OpportunityDetailView({ id, onBack }: Props) {
           </div>
         </div>
       </div>
+
+      <ActivityModal
+        isOpen={activityModal}
+        dealId={id}
+        prospectId={deal?.prospect?.id}
+        onClose={() => setActivityModal(false)}
+        onSaved={loadActivities}
+      />
     </div>
   )
 }
