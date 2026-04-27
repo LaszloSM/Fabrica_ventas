@@ -1,40 +1,41 @@
-version: '3.8'
+version: '3.9'
 
 services:
-  api:
+  backend:
     build:
       context: ./backend
-      dockerfile: ../docker/Dockerfile
-    container_name: crm_api
+      dockerfile: Dockerfile
+    container_name: coimpactob_backend
     ports:
       - "8000:8000"
     environment:
       - APP_NAME=CoimpactoB CRM API
-      - DEBUG=True
-      - COSMOS_CONNECTION_STRING=${COSMOS_CONNECTION_STRING:-mongodb://admin:password@mongo:27017}
-      - COSMOS_DATABASE=fabrica_ventas_dev
-      - GROQ_API_KEY=${GROQ_API_KEY}
+      - DEBUG=false
+      - COSMOS_CONNECTION_STRING=${COSMOS_CONNECTION_STRING}
+      - COSMOS_DATABASE=fabrica_ventas
+      - USE_MOCK_DB=false
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
       - GROQ_MODEL=mixtral-8x7b-32768
       - SENDGRID_API_KEY=${SENDGRID_API_KEY:-}
       - SENDGRID_FROM_EMAIL=noreply@coimpactob.com
-      - SECRET_KEY=dev_secret_key_12345
-      - CORS_ORIGINS=["http://localhost:3000", "http://localhost:8000"]
-    volumes:
-      - ./backend:/app
-    depends_on:
-      - mongo
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+      - SECRET_KEY=${SECRET_KEY:-dev_secret_only}
+      - CORS_ORIGINS=["http://localhost:3000","http://localhost:8080"]
+    restart: unless-stopped
 
-  mongo:
-    image: mongo:6
-    container_name: crm_mongo
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: coimpactob_frontend
     ports:
-      - "27017:27017"
+      - "8080:8080"
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=admin
-      - MONGO_INITDB_ROOT_PASSWORD=password
-    volumes:
-      - mongo_data:/data/db
-
-volumes:
-  mongo_data:
+      - NODE_ENV=production
+      - FASTAPI_BACKEND_URL=http://backend:8000
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - SESSION_SECRET=${SESSION_SECRET:-coimpactob-change-me}
+      - PORT=8080
+    depends_on:
+      - backend
+    restart: unless-stopped
