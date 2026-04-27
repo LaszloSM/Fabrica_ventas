@@ -113,14 +113,36 @@ async def get_metrics(year: int = Query(2026), db=Depends(get_db)):
 
     leaderboard = sorted(owner_stats.values(), key=lambda x: x["won"], reverse=True)
 
+    # Recent active deals (last 10, sorted by update)
+    recent_docs = await db["deals"].find(
+        {"stage": {"$nin": ["GANADO", "PERDIDO"]}, "deleted": {"$ne": True}}
+    ).sort("updatedAt", -1).limit(10).to_list(length=10)
+
+    recent_deals = []
+    for doc in recent_docs:
+        prospect_name = ""
+        if doc.get("prospectId"):
+            p = await db["prospects"].find_one({"_id": doc["prospectId"]})
+            if p:
+                prospect_name = p.get("name", "")
+        recent_deals.append({
+            "id": doc.get("_id", ""),
+            "stage": doc.get("stage", ""),
+            "serviceType": doc.get("serviceType", ""),
+            "value": doc.get("value", 0),
+            "nextAction": doc.get("nextAction", ""),
+            "prospectName": prospect_name,
+        })
+
     return {
         "data": {
             "funnel": funnel,
             "goals": goals_out,
             "leaderboard": leaderboard,
+            "recentDeals": recent_deals,
             "summary": {
                 "totalDeals": len(deals),
-                "totalPipeline": sum(d.ponderatedValue or 0 for d in deals),
+                "totalPipeline": sum(d.value or 0 for d in deals),
                 "won": len([d for d in deals if d.stage == "GANADO"]),
                 "lost": len([d for d in deals if d.stage == "PERDIDO"]),
             }
