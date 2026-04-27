@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "cd frontend && npm run dev",
+    "server": "cd frontend && npm run server",
+    "build": "cd frontend && npm run build",
+    "start": "cd frontend && npm run start",
     "backend:install": "python -m pip install -r backend/requirements.txt",
     "backend:dev": "python -m uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000",
-    "build": "next build",
-    "start": "next start"
+    "db:reset": "npx ts-node scripts/reset-azure-db.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
