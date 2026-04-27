@@ -85,8 +85,8 @@ export function KanbanBoard({ onDealClick }: Props) {
   )
 
   useEffect(() => {
-    api.get('/deals').then(d => {
-      if (d) setDeals(Array.isArray(d) ? d : d.deals ?? [])
+    api.get('/deals?limit=500').then(d => {
+      if (d) setDeals(Array.isArray(d) ? d : d.data ?? [])
       setLoading(false)
     })
   }, [])
