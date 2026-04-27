@@ -1,71 +1,66 @@
-name: Deploy to Azure
+name: Deploy to Azure Container Apps
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
+env:
+  REGISTRY: coimpactobacr.azurecr.io
+  RESOURCE_GROUP: coimpactob-rg
+  BACKEND_APP: coimpactob-backend
+  FRONTEND_APP: coimpactob-frontend
+
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set lowercase repo name
-        run: echo "REPO_LOWER=$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:')" >> $GITHUB_ENV
-
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/coimpactob-backend:${{ github.sha }}
-
-      - name: Build and push frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/coimpactob-frontend:${{ github.sha }}
-
   deploy-backend:
-    needs: build-and-push
+    name: Build & Deploy Backend
     runs-on: ubuntu-latest
-
     steps:
-      - name: Login to Azure
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy backend
+      - name: Build & push backend image
+        run: |
+          az acr build \
+            --registry coimpactobacr \
+            --image ${{ env.BACKEND_APP }}:${{ github.sha }} \
+            --image ${{ env.BACKEND_APP }}:latest \
+            ./backend
+
+      - name: Deploy backend to Container Apps
         run: |
           az containerapp update \
-            --name ${{ secrets.AZURE_BACKEND_APP_NAME }} \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --image ${{ secrets.DOCKER_USERNAME }}/coimpactob-backend:${{ github.sha }}
+            --name ${{ env.BACKEND_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.REGISTRY }}/${{ env.BACKEND_APP }}:${{ github.sha }}
 
   deploy-frontend:
-    needs: deploy-backend
+    name: Build & Deploy Frontend
     runs-on: ubuntu-latest
-
+    needs: deploy-backend
     steps:
-      - name: Login to Azure
+      - uses: actions/checkout@v4
+
+      - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy frontend
+      - name: Build & push frontend image
+        run: |
+          az acr build \
+            --registry coimpactobacr \
+            --image ${{ env.FRONTEND_APP }}:${{ github.sha }} \
+            --image ${{ env.FRONTEND_APP }}:latest \
+            ./frontend
+
+      - name: Deploy frontend to Container Apps
         run: |
           az containerapp update \
-            --name ${{ secrets.AZURE_FRONTEND_APP_NAME }} \
-            --resource-group ${{ secrets.AZURE_RESOURCE_GROUP }} \
-            --image ${{ secrets.DOCKER_USERNAME }}/coimpactob-frontend:${{ github.sha }}
+            --name ${{ env.FRONTEND_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ env.REGISTRY }}/${{ env.FRONTEND_APP }}:${{ github.sha }}
