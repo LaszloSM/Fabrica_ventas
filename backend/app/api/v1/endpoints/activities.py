@@ -25,7 +25,7 @@ async def list_activities(
     dealId: str = Query(None),
     prospectId: str = Query(None),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50),
+    limit: int = Query(200),
     db=Depends(get_db)
 ):
     query = {}
@@ -34,13 +34,32 @@ async def list_activities(
     if prospectId:
         query["prospectId"] = prospectId
     docs = await db["activities"].find(query).sort("doneAt", -1).skip(skip).limit(limit).to_list(length=limit)
+
+    # Collect all unique createdById values for batch lookup
+    creator_ids = {doc.get("createdById") for doc in docs if doc.get("createdById")}
+    creator_names: dict = {}
+    if creator_ids:
+        # Look in users collection first
+        async for u in db["users"].find({"_id": {"$in": list(creator_ids)}}):
+            creator_names[u["_id"]] = u.get("name") or u.get("email", u["_id"])
+        # Fill missing from team_members (by email)
+        missing = creator_ids - set(creator_names.keys())
+        if missing:
+            async for tm in db["team_members"].find({"email": {"$in": list(missing)}}):
+                creator_names[tm.get("email", "")] = tm.get("name", tm.get("email", ""))
+
     prospect_svc = ProspectService(db)
     items = []
     for doc in docs:
         prospect = None
         if doc.get("prospectId"):
             prospect = await prospect_svc.get_prospect(doc["prospectId"])
-        items.append(_fmt(doc, prospect))
+        item = _fmt(doc, prospect)
+        # Resolve creator name
+        cid = doc.get("createdById")
+        if cid:
+            item["createdByName"] = creator_names.get(cid, cid)
+        items.append(item)
     return {"data": items}
 
 @router.post("", status_code=201)

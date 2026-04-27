@@ -58,12 +58,30 @@ async def get_or_create_me(req: Request, db=Depends(get_db)):
 
 @router.get("")
 async def list_users(db=Depends(get_db)):
-    """Lists all system users."""
+    """Lists all system users, merged with team_members so the list is always populated."""
     users_col = db["users"]
-    users = await users_col.find({}).to_list(length=100)
+    users = await users_col.find({}).to_list(length=200)
+    by_email: dict = {}
     for u in users:
-        u["id"] = str(u.pop("_id"))
-    return {"data": users}
+        u["id"] = str(u.pop("_id", u.get("email", "")))
+        by_email[u.get("email", "")] = u
+
+    # Supplement with team_members (covers reps that never logged in)
+    async for tm in db["team_members"].find({}):
+        email = tm.get("email", "")
+        if email and email not in by_email:
+            by_email[email] = {
+                "id": str(tm.get("_id", email)),
+                "name": tm.get("name", email),
+                "email": email,
+                "role": "SALES",
+            }
+        elif email in by_email and not by_email[email].get("name"):
+            # Enrich user record with name from team_members
+            by_email[email]["name"] = tm.get("name", email)
+
+    result = sorted(by_email.values(), key=lambda x: x.get("name", ""))
+    return {"data": result}
 
 
 @router.post("/role")

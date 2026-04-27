@@ -40,13 +40,14 @@ export function NewOpportunityModal({ isOpen, onClose }: Props) {
     setError('')
     setLoading(true)
     try {
-      // Create prospect first
-      const prospect = await api.post('/prospects', {
+      // Create prospect first (backend wraps in { data: {...} })
+      const prospectRes = await api.post('/prospects', {
         name: form.prospectName.trim(),
         industry: 'General',
         size: 'PEQUEÑA',
         region: 'Colombia',
       })
+      const prospect = prospectRes?.data ?? prospectRes
       if (!prospect?.id) { setError('No se pudo crear la cuenta. Intenta de nuevo.'); return }
 
       // Create deal

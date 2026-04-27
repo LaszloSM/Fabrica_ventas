@@ -35,7 +35,9 @@ export function GoalsView() {
 
   const totalTarget = goals.reduce((s, g) => s + (g.targetValue ?? 0), 0)
   const totalCurrent = goals.reduce((s, g) => s + (g.currentValue ?? 0), 0)
+  const totalPipeline = goals.reduce((s, g) => s + (g.pipelineValue ?? 0), 0)
   const overallPct = totalTarget > 0 ? Math.round((totalCurrent / totalTarget) * 100) : 0
+  const pipelinePct = totalTarget > 0 ? Math.round((totalPipeline / totalTarget) * 100) : 0
 
   return (
     <div className="flex flex-col gap-8">
@@ -44,18 +46,22 @@ export function GoalsView() {
         <p className="text-on-surface-variant mt-1">KPIs y OKRs por unidad de negocio.</p>
       </header>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
         <div className="glass-card p-6">
           <div className="text-xs font-bold text-on-surface-variant uppercase mb-1">Meta Total</div>
           <div className="text-2xl font-bold">{fmt(totalTarget)}</div>
         </div>
         <div className="glass-card p-6">
-          <div className="text-xs font-bold text-on-surface-variant uppercase mb-1">Logrado</div>
+          <div className="text-xs font-bold text-on-surface-variant uppercase mb-1">Ganado</div>
           <div className="text-2xl font-bold text-green-600">{fmt(totalCurrent)}</div>
         </div>
         <div className="glass-card p-6">
-          <div className="text-xs font-bold text-on-surface-variant uppercase mb-1">Avance Global</div>
-          <div className="text-2xl font-bold text-brand-primary-container">{overallPct}%</div>
+          <div className="text-xs font-bold text-on-surface-variant uppercase mb-1">Pipeline Activo</div>
+          <div className="text-2xl font-bold text-blue-600">{fmt(totalPipeline)}</div>
+        </div>
+        <div className="glass-card p-6">
+          <div className="text-xs font-bold text-on-surface-variant uppercase mb-1">Avance Pipeline</div>
+          <div className="text-2xl font-bold text-brand-primary-container">{pipelinePct}%</div>
         </div>
       </div>
 
@@ -94,16 +100,32 @@ export function GoalsView() {
                       {pct}%
                     </span>
                   </div>
-                  <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden">
+                  {/* Pipeline bar (light) */}
+                  <div className="w-full bg-surface-container h-2 rounded-full overflow-hidden relative">
+                    {/* Pipeline progress (blue-light) */}
+                    {goal.pipelineValue > 0 && (
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${Math.min(Math.round((goal.pipelineValue / goal.targetValue) * 100), 100)}%` }}
+                        transition={{ duration: 0.6, delay: i * 0.05 }}
+                        className="absolute inset-y-0 left-0 bg-blue-200 rounded-full"
+                      />
+                    )}
+                    {/* Won progress (solid) */}
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${Math.min(pct, 100)}%` }}
-                      transition={{ duration: 0.8, delay: i * 0.05 }}
-                      className={`h-full rounded-full ${pct >= 100 ? 'bg-green-500' : 'bg-brand-primary-container'}`}
+                      transition={{ duration: 0.8, delay: i * 0.05 + 0.1 }}
+                      className={`absolute inset-y-0 left-0 rounded-full ${pct >= 100 ? 'bg-green-500' : 'bg-brand-primary-container'}`}
                     />
                   </div>
                   <div className="flex justify-between text-xs text-on-surface-variant mt-2">
-                    <span>Logrado: {fmt(goal.currentValue ?? 0)}</span>
+                    <span>
+                      Ganado: {fmt(goal.currentValue ?? 0)}
+                      {(goal.pipelineValue ?? 0) > 0 && (
+                        <span className="text-blue-500 ml-2">· Pipeline: {fmt(goal.pipelineValue)}</span>
+                      )}
+                    </span>
                     <span>Meta: {fmt(goal.targetValue ?? 0)}</span>
                   </div>
                 </div>

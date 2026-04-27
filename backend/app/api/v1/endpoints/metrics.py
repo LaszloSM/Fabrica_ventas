@@ -67,17 +67,21 @@ async def get_metrics(year: int = Query(2026), db=Depends(get_db)):
                     "updatedAt": datetime.utcnow(),
                 })
 
-    won_deals = [d for d in deals if d.stage == "GANADO"]
+    # Active pipeline deals (not lost) contribute to goal progress
+    active_deals = [d for d in deals if d.stage != "PERDIDO"]
     goals_docs = await goals_col.find({"year": year}).to_list(length=None)
     goals_out = []
     for g in goals_docs:
         svc_filter = g.get("serviceType")
-        relevant = [d for d in won_deals if d.serviceType == svc_filter]
-        current_val = sum(d.value or 0 for d in relevant)
-        current_units = len(relevant)
+        relevant = [d for d in active_deals if d.serviceType == svc_filter]
+        won_relevant = [d for d in relevant if d.stage == "GANADO"]
+        # currentValue = won deals value; pipeline = all active deals value
+        current_val = sum(d.value or 0 for d in won_relevant)
+        pipeline_val = sum(d.value or 0 for d in relevant)
+        current_units = len(won_relevant)
         await goals_col.update_one(
             {"_id": g["_id"]},
-            {"$set": {"currentValue": current_val, "currentUnits": current_units}}
+            {"$set": {"currentValue": current_val, "currentUnits": current_units, "pipelineValue": pipeline_val}}
         )
         goals_out.append({
             "id": g["_id"],
@@ -87,6 +91,7 @@ async def get_metrics(year: int = Query(2026), db=Depends(get_db)):
             "targetValue": g.get("targetValue", 50_000_000),
             "targetUnits": g.get("targetUnits", 5),
             "currentValue": current_val,
+            "pipelineValue": pipeline_val,
             "currentUnits": current_units,
             "region": g.get("region"),
             "userId": g.get("userId"),
