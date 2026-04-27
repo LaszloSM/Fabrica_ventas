@@ -25,13 +25,21 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: coimpactobacr.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build & push backend image
-        run: |
-          az acr build \
-            --registry coimpactobacr \
-            --image coimpactob-api-prod:${{ github.sha }} \
-            --image coimpactob-api-prod:latest \
-            ./backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            coimpactobacr.azurecr.io/coimpactob-api-prod:${{ github.sha }}
+            coimpactobacr.azurecr.io/coimpactob-api-prod:latest
 
       - name: Deploy backend to Container Apps
         run: |
@@ -46,7 +54,7 @@ jobs:
               COSMOS_CONNECTION_STRING="${{ secrets.COSMOS_CONNECTION_STRING }}" \
               COSMOS_DATABASE="fabrica_ventas" \
               SECRET_KEY="${{ secrets.SECRET_KEY }}" \
-              CORS_ORIGINS='["${{ env.FRONTEND_URL }}","http://localhost:3000","http://localhost:8080"]'
+              "CORS_ORIGINS=[\"${{ env.FRONTEND_URL }}\",\"http://localhost:3000\",\"http://localhost:8080\"]"
 
   deploy-frontend:
     name: Build & Deploy Frontend
@@ -60,13 +68,21 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Login to ACR
+        uses: docker/login-action@v3
+        with:
+          registry: coimpactobacr.azurecr.io
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
       - name: Build & push frontend image
-        run: |
-          az acr build \
-            --registry coimpactobacr \
-            --image coimpactob-web-prod:${{ github.sha }} \
-            --image coimpactob-web-prod:latest \
-            ./frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            coimpactobacr.azurecr.io/coimpactob-web-prod:${{ github.sha }}
+            coimpactobacr.azurecr.io/coimpactob-web-prod:latest
 
       - name: Deploy frontend to Container Apps
         run: |
