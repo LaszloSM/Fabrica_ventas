@@ -15,6 +15,9 @@ const API_PREFIX = '/api/v1'
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!
 const oauthClient = new OAuth2Client(GOOGLE_CLIENT_ID)
 
+const isProd = process.env.NODE_ENV === 'production'
+
+app.set('trust proxy', 1)
 app.use(cors({ origin: true, credentials: true }))
 app.use(cookieParser())
 app.use(express.json())
@@ -22,7 +25,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'coimpactob-secret-change-me',
   resave: false,
   saveUninitialized: false,
-  cookie: { secure: false, maxAge: 7 * 24 * 60 * 60 * 1000 }
+  cookie: {
+    secure: isProd,
+    httpOnly: true,
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    sameSite: isProd ? 'none' : 'lax',
+  }
 }))
 
 // ── Auth ──────────────────────────────────────────────────────────────
