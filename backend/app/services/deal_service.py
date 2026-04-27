@@ -10,25 +10,17 @@ class DealService:
         self.collection = db["deals"]
 
     async def create_deal(self, deal_data: dict, user_id: str) -> Deal:
-        """Crear deal con validaciones"""
-
-        if not deal_data.get("problem") or not deal_data["problem"].strip():
-            raise ValueError("problem: campo obligatorio")
-        if not deal_data.get("benefit") or not deal_data["benefit"].strip():
-            raise ValueError("benefit: campo obligatorio")
-        if not deal_data.get("nextAction") or not deal_data["nextAction"].strip():
-            raise ValueError("nextAction: campo obligatorio")
-
-        if deal_data.get("nextActionDate") <= datetime.utcnow():
-            raise ValueError("nextActionDate debe ser en el futuro")
-
+        """Crear deal"""
         deal_data["_id"] = f"deal_{uuid.uuid4().hex[:12]}"
         deal_data["createdAt"] = datetime.utcnow()
         deal_data["updatedAt"] = datetime.utcnow()
         deal_data["assignedTo"] = deal_data.get("assignedTo") or user_id
-        deal_data["stage"] = "PROSPECTO_IDENTIFICADO"
-        deal_data["probability"] = 0.0
-        deal_data["ponderatedValue"] = 0.0
+        deal_data.setdefault("stage", "PROSPECTO_IDENTIFICADO")
+        deal_data.setdefault("probability", 0.0)
+        deal_data.setdefault("ponderatedValue", 0.0)
+        deal_data.setdefault("problem", "")
+        deal_data.setdefault("benefit", "")
+        deal_data.setdefault("nextAction", "")
 
         await self.collection.insert_one(deal_data)
         deal_data["id"] = deal_data["_id"]

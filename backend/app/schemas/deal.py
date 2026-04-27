@@ -6,15 +6,17 @@ class DealCreate(BaseModel):
     prospectId: str
     contactId: Optional[str] = None
     serviceType: str
-    line: str
+    line: Optional[str] = None
     segment: Optional[str] = None
     region: Optional[str] = None
-    value: Optional[float] = None
+    value: Optional[float] = 0.0
     quarter: Optional[int] = None
+    stage: Optional[str] = "PROSPECTO_IDENTIFICADO"
+    notes: Optional[str] = None
 
-    problem: Optional[str] = Field(None, max_length=500)
-    benefit: Optional[str] = Field(None, max_length=500)
-    nextAction: Optional[str] = Field(None, max_length=500)
+    problem: Optional[str] = Field(default="", max_length=500)
+    benefit: Optional[str] = Field(default="", max_length=500)
+    nextAction: Optional[str] = Field(default="", max_length=500)
     nextActionDate: Optional[datetime] = None
     assignedTo: Optional[str] = None
     proyectos: Optional[str] = None
