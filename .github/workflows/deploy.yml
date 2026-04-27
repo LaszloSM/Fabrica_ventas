@@ -83,6 +83,8 @@ jobs:
           tags: |
             coimpactobacr.azurecr.io/coimpactob-web-prod:${{ github.sha }}
             coimpactobacr.azurecr.io/coimpactob-web-prod:latest
+          build-args: |
+            VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
 
       - name: Deploy frontend to Container Apps
         run: |

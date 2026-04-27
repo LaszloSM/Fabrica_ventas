@@ -1,11 +1,15 @@
 FROM node:20-alpine AS builder
 
+# VITE_ vars must be baked in at build time
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 COPY . .
 
-# Build Vite frontend
+# Build Vite frontend (VITE_GOOGLE_CLIENT_ID is embedded here)
 RUN npm run build
 
 # Bundle server.ts into a single JS file using esbuild (already in devDeps via vite)
