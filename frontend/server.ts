@@ -39,8 +39,9 @@ app.post('/auth/google', async (req, res) => {
       const userRes = await fetch(`${FASTAPI_URL}${API_PREFIX}/users/me`, {
         headers: {
           'x-user-email': payload.email!,
+          'x-user-name': payload.name ?? '',
           'x-user-id': payload.sub,
-          'x-user-role': 'SALES'
+          'x-user-role': 'SALES',
         }
       })
       if (userRes.ok) {

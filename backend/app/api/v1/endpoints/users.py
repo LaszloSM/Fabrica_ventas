@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request, HTTPException
 from app.database import get_db
 from datetime import datetime
 import uuid
@@ -8,6 +8,52 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 def _id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
+
+
+@router.get("/me")
+async def get_or_create_me(req: Request, db=Depends(get_db)):
+    """
+    Called by Express server on every Google login.
+    Gets or creates user by email from x-user-email header.
+    Returns { role, id } for the session.
+    """
+    email = req.headers.get("x-user-email", "")
+    name = req.headers.get("x-user-name", "")
+    if not email:
+        raise HTTPException(status_code=400, detail="x-user-email header required")
+
+    users_col = db["users"]
+    user = await users_col.find_one({"email": email})
+    if user:
+        return {"role": user.get("role", "SALES"), "id": str(user.get("_id", email))}
+
+    # First user becomes ADMIN
+    count = await users_col.count_documents({})
+    role = "ADMIN" if count == 0 else "SALES"
+    name_clean = name or email.split("@")[0].replace(".", " ").replace("_", " ").title()
+
+    await users_col.insert_one({
+        "_id": email,
+        "email": email,
+        "name": name_clean,
+        "role": role,
+        "createdAt": datetime.utcnow(),
+    })
+
+    # Auto-create team_member
+    existing_team = await db["team_members"].find_one({"email": email})
+    if not existing_team:
+        await db["team_members"].insert_one({
+            "_id": _id("tm"),
+            "name": name_clean,
+            "email": email,
+            "role": "SALES_REP",
+            "isActive": True,
+            "createdAt": datetime.utcnow(),
+            "updatedAt": datetime.utcnow(),
+        })
+
+    return {"role": role, "id": email}
 
 
 @router.get("")
