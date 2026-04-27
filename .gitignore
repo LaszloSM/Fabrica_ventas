@@ -79,3 +79,5 @@ test-env.js
 # GIT WORKTREES (Isolated development workspaces)
 # ============================================================
 .worktrees/
+.gstack/
+coimpactob-crm/.superpowers/
