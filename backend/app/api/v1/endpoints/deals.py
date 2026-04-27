@@ -89,41 +89,45 @@ async def list_deals(
 ):
     deals, total = await service.list_deals(skip, limit, stage, owner, line)
 
-    # Pre-fetch all related data (Cosmos DB doesn't support $in on _id)
-    # Fetch all prospects, contacts, team_members into memory for fast lookup
-    prospect_ids = {d.prospectId for d in deals if d.prospectId}
-    contact_ids = {d.contactId for d in deals if d.contactId}
-    assigned_ids = {d.assignedTo for d in deals if d.assignedTo}
-    deal_ids = {d.id for d in deals if d.id}
+    # Collect only the IDs we actually need for this page
+    prospect_ids = list({d.prospectId for d in deals if d.prospectId})
+    contact_ids = list({d.contactId for d in deals if d.contactId})
+    assigned_ids = list({d.assignedTo for d in deals if d.assignedTo})
+    deal_ids = list({d.id for d in deals if d.id})
 
-    # Fetch ALL prospects and index by _id (Cosmos DB $in on _id is unreliable)
+    # Fetch only needed prospects one-by-one (Cosmos DB $in on _id is unreliable)
     prospects = {}
-    async for doc in db["prospects"].find({}):
-        doc["id"] = doc["_id"]
-        prospects[doc["_id"]] = doc
+    for pid in prospect_ids:
+        doc = await db["prospects"].find_one({"_id": pid})
+        if doc:
+            doc["id"] = doc["_id"]
+            prospects[pid] = doc
 
-    # Fetch ALL contacts and index by _id
+    # Fetch only needed contacts
     contacts = {}
-    async for doc in db["contacts"].find({}):
-        doc["id"] = doc["_id"]
-        contacts[doc["_id"]] = doc
+    for cid in contact_ids:
+        doc = await db["contacts"].find_one({"_id": cid})
+        if doc:
+            doc["id"] = doc["_id"]
+            contacts[cid] = doc
 
-    # Fetch ALL team members and index by _id
+    # Fetch only needed team members
     team_members = {}
-    async for doc in db["team_members"].find({}):
-        doc["id"] = doc["_id"]
-        team_members[doc["_id"]] = doc
+    for uid in assigned_ids:
+        doc = await db["team_members"].find_one({"_id": uid})
+        if doc:
+            doc["id"] = doc["_id"]
+            team_members[uid] = doc
 
-    # Batch fetch activities (last 5 per deal) - $in on dealId works
-    activities_by_deal = {}
+    # Batch fetch activities for this page's deals
+    activities_by_deal: dict = {did: [] for did in deal_ids}
     if deal_ids:
-        async for doc in db["activities"].find({"dealId": {"$in": list(deal_ids)}}).sort("doneAt", -1).limit(len(deal_ids) * 5):
+        async for doc in db["activities"].find({"dealId": {"$in": deal_ids}}).sort("doneAt", -1).limit(len(deal_ids) * 5):
             doc["id"] = doc["_id"]
             did = doc.get("dealId")
-            if did:
-                if did not in activities_by_deal:
-                    activities_by_deal[did] = []
-                activities_by_deal[did].append(doc)
+            if did and did in activities_by_deal:
+                if len(activities_by_deal[did]) < 5:
+                    activities_by_deal[did].append(doc)
 
     items = []
     for deal in deals:

@@ -39,7 +39,7 @@ class DealService:
                          owner: Optional[str] = None,
                          line: Optional[str] = None) -> tuple[List[Deal], int]:
         """Listar deals con filtros"""
-        query = {}
+        query: dict = {"deleted": {"$ne": True}}
         if stage:
             query["stage"] = stage
         if owner:
@@ -47,7 +47,7 @@ class DealService:
         if line:
             query["line"] = line
 
-        docs = await self.collection.find(query).skip(skip).limit(limit).to_list(length=limit)
+        docs = await self.collection.find(query).sort("updatedAt", -1).skip(skip).limit(limit).to_list(length=limit)
         total = await self.collection.count_documents(query)
 
         deals = []
