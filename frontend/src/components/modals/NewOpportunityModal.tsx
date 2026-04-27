@@ -115,7 +115,7 @@ export function NewOpportunityModal({ isOpen, onClose }: Props) {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex flex-col gap-1.5">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Valor (USD)</label>
+                  <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Valor (COP)</label>
                   <input
                     type="number"
                     value={form.value}

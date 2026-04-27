@@ -66,7 +66,7 @@ export const NewOpportunityForm = ({ onSubmit }: { onSubmit: () => void }) => {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
-          <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Valor (USD)</label>
+          <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Valor (COP)</label>
           <input type="number" placeholder="0.00" className="w-full bg-surface border border-outline-variant rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary-container" />
         </div>
         <div className="flex flex-col gap-1.5">

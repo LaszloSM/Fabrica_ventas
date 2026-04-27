@@ -5,17 +5,30 @@ import uuid
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+ROLES = ["SUPERADMIN", "ADMIN", "SALES", "VIEWER"]
 
 def _id(prefix: str) -> str:
     return f"{prefix}_{uuid.uuid4().hex[:12]}"
 
 
+def _fmt_user(doc: dict) -> dict:
+    """Formatea un documento de user a response limpio."""
+    return {
+        "id": str(doc.get("_id", "")),
+        "email": doc.get("email", ""),
+        "name": doc.get("name", ""),
+        "role": doc.get("role", "SALES"),
+        "image": doc.get("image"),
+        "createdAt": doc.get("createdAt"),
+    }
+
+
 @router.get("/me")
 async def get_or_create_me(req: Request, db=Depends(get_db)):
     """
-    Called by Express server on every Google login.
-    Gets or creates user by email from x-user-email header.
-    Returns { role, id } for the session.
+    Llamado por Express en cada login de Google.
+    Obtiene o crea usuario por email.
+    El primer usuario del sistema es SUPERADMIN.
     """
     email = req.headers.get("x-user-email", "")
     name = req.headers.get("x-user-name", "")
@@ -24,33 +37,44 @@ async def get_or_create_me(req: Request, db=Depends(get_db)):
 
     users_col = db["users"]
     user = await users_col.find_one({"email": email})
-    if user:
-        existing_role = user.get("role", "SALES")
-        # Auto-promote if no ADMIN exists
-        if existing_role != "ADMIN":
-            admin_count = await users_col.count_documents({"role": "ADMIN"})
-            if admin_count == 0:
-                await users_col.update_one({"_id": user["_id"]}, {"$set": {"role": "ADMIN"}})
-                existing_role = "ADMIN"
-        return {"role": existing_role, "id": str(user.get("_id", email))}
 
-    # First user (or no admin) becomes ADMIN
-    count = await users_col.count_documents({})
-    admin_count = await users_col.count_documents({"role": "ADMIN"})
-    role = "ADMIN" if count == 0 or admin_count == 0 else "SALES"
+    if user:
+        role = user.get("role", "SALES")
+
+        # Si no hay SUPERADMIN, promover al mas antiguo
+        if role != "SUPERADMIN":
+            sa_count = await users_col.count_documents({"role": "SUPERADMIN"})
+            if sa_count == 0:
+                # Promover al mas antiguo
+                oldest = await users_col.find_one(
+                    {}, sort=[("createdAt", 1)]
+                )
+                if oldest and oldest.get("_id") == user["_id"]:
+                    await users_col.update_one(
+                        {"_id": user["_id"]},
+                        {"$set": {"role": "SUPERADMIN"}}
+                    )
+                    role = "SUPERADMIN"
+
+        return {"role": role, "id": str(user.get("_id", email))}
+
+    # Nuevo usuario
+    total_count = await users_col.count_documents({})
+    role = "SUPERADMIN" if total_count == 0 else "SALES"
     name_clean = name or email.split("@")[0].replace(".", " ").replace("_", " ").title()
 
+    user_id = f"usr_{uuid.uuid4().hex[:12]}"
     await users_col.insert_one({
-        "_id": email,
+        "_id": user_id,
         "email": email,
         "name": name_clean,
         "role": role,
         "createdAt": datetime.utcnow(),
     })
 
-    # Auto-create team_member
-    existing_team = await db["team_members"].find_one({"email": email})
-    if not existing_team:
+    # Crear team_member
+    existing_tm = await db["team_members"].find_one({"email": email})
+    if not existing_tm:
         await db["team_members"].insert_one({
             "_id": _id("tm"),
             "name": name_clean,
@@ -61,116 +85,39 @@ async def get_or_create_me(req: Request, db=Depends(get_db)):
             "updatedAt": datetime.utcnow(),
         })
 
-    return {"role": role, "id": email}
+    return {"role": role, "id": user_id}
 
 
 @router.get("")
 async def list_users(db=Depends(get_db)):
-    """Lists all system users, merged with team_members so the list is always populated."""
+    """Devuelve todos los usuarios del sistema mas team members que no han iniciado sesion."""
     users_col = db["users"]
     users = await users_col.find({}).to_list(length=200)
+
     by_email: dict = {}
     for u in users:
-        u["id"] = str(u.pop("_id", u.get("email", "")))
-        by_email[u.get("email", "")] = u
+        d = _fmt_user(u)
+        by_email[d["email"]] = d
 
-    # Supplement with team_members (covers reps that never logged in)
+    # Suplementar con team_members que nunca iniciaron sesion
     async for tm in db["team_members"].find({}):
         email = tm.get("email", "")
-        if email and email not in by_email:
+        if not email:
+            continue
+        if email not in by_email:
             by_email[email] = {
-                "id": str(tm.get("_id", email)),
-                "name": tm.get("name", email),
+                "id": str(tm.get("_id", "")),
+                "name": tm.get("name", email.split("@")[0]),
                 "email": email,
                 "role": "SALES",
+                "image": None,
+                "createdAt": tm.get("createdAt"),
             }
-        elif email in by_email and not by_email[email].get("name"):
-            # Enrich user record with name from team_members
+        elif not by_email[email].get("name"):
             by_email[email]["name"] = tm.get("name", email)
 
     result = sorted(by_email.values(), key=lambda x: x.get("name", ""))
     return {"data": result}
-
-
-@router.post("/role")
-async def get_or_create_role(email: str = Query(...), db=Depends(get_db)):
-    """
-    Returns user role. Creates user if not exists.
-    First user in DB becomes ADMIN; subsequent users become SALES.
-    Uses email as string _id for Cosmos DB compatibility.
-    Also creates a team_member automatically so the user appears in the sales team.
-    """
-    users_col = db["users"]
-    user = await users_col.find_one({"email": email})
-    if user:
-        return {"data": {"role": user.get("role", "SALES")}}
-
-    count = await users_col.count_documents({})
-    role = "ADMIN" if count == 0 else "SALES"
-
-    # Extract name from email (e.g., "juan.perez@coimpactob.org" -> "Juan Perez")
-    name_from_email = email.split("@")[0].replace(".", " ").replace("_", " ").title()
-
-    await users_col.insert_one({
-        "_id": email,
-        "email": email,
-        "role": role,
-        "createdAt": datetime.utcnow(),
-    })
-
-    # Auto-create team member for this user
-    existing_team = await db["team_members"].find_one({"email": email})
-    if not existing_team:
-        await db["team_members"].insert_one({
-            "_id": _id("tm"),
-            "name": name_from_email,
-            "email": email,
-            "role": "SALES_REP",
-            "isActive": True,
-            "createdAt": datetime.utcnow(),
-            "updatedAt": datetime.utcnow(),
-        })
-
-    return {"data": {"role": role}}
-
-
-@router.post("/sync-team")
-async def sync_users_to_team(db=Depends(get_db)):
-    """
-    Syncs all system users to team members.
-    Creates team_member for any user that doesn't have one.
-    """
-    users_col = db["users"]
-    team_col = db["team_members"]
-    
-    users = await users_col.find({}).to_list(length=100)
-    created = 0
-    skipped = 0
-    
-    for user in users:
-        email = user.get("email")
-        if not email:
-            continue
-            
-        existing = await team_col.find_one({"email": email})
-        if existing:
-            skipped += 1
-            continue
-        
-        name_from_email = email.split("@")[0].replace(".", " ").replace("_", " ").title()
-        
-        await team_col.insert_one({
-            "_id": _id("tm"),
-            "name": name_from_email,
-            "email": email,
-            "role": "SALES_REP",
-            "isActive": True,
-            "createdAt": datetime.utcnow(),
-            "updatedAt": datetime.utcnow(),
-        })
-        created += 1
-    
-    return {"data": {"created": created, "skipped": skipped}}
 
 
 @router.patch("/{user_id}/role")
@@ -178,40 +125,65 @@ async def update_user_role(
     user_id: str,
     req: Request,
     db=Depends(get_db),
-    role: str = Body(..., embed=True),
+    payload: dict = Body(...),
 ):
-    """Update a user's role. Only an ADMIN can call this."""
+    """Cambiar rol. SUPERADMIN puede todo. ADMIN gestiona SALES/VIEWER. Nadie puede degradar a un SUPERADMIN."""
+    role = payload.get("role", "").upper()
+    if role not in ROLES:
+        raise HTTPException(status_code=400, detail=f"Rol invalido. Opciones: {ROLES}")
+
     requester_email = req.headers.get("x-user-email", "")
     requester = await db["users"].find_one({"email": requester_email})
-    if not requester or requester.get("role") != "ADMIN":
-        raise HTTPException(status_code=403, detail="Solo un ADMIN puede cambiar roles")
+    if not requester:
+        raise HTTPException(status_code=401, detail="Usuario no autenticado")
 
-    valid_roles = {"ADMIN", "SALES", "VIEWER"}
-    if role not in valid_roles:
-        raise HTTPException(status_code=400, detail=f"Rol inválido. Opciones: {valid_roles}")
+    requester_role = requester.get("role", "SALES")
+    if requester_role not in ("SUPERADMIN", "ADMIN"):
+        raise HTTPException(status_code=403, detail="Solo SUPERADMIN o ADMIN pueden cambiar roles")
 
-    # user_id is the email (_id in our schema)
-    result = await db["users"].update_one(
+    target = await db["users"].find_one({"_id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="Usuario no encontrado")
+
+    target_role = target.get("role", "SALES")
+
+    # SUPERADMIN no puede ser degradado
+    if target_role == "SUPERADMIN" and requester_role != "SUPERADMIN":
+        raise HTTPException(status_code=403, detail="Solo un SUPERADMIN puede modificar a otro SUPERADMIN")
+    if target_role == "SUPERADMIN" and role != "SUPERADMIN":
+        raise HTTPException(status_code=403, detail="No se puede degradar al SUPERADMIN")
+
+    # ADMIN solo puede gestionar SALES y VIEWER
+    if requester_role == "ADMIN" and target_role not in ("SALES", "VIEWER"):
+        raise HTTPException(status_code=403, detail="ADMIN solo puede cambiar roles de SALES y VIEWER")
+    if requester_role == "ADMIN" and role not in ("SALES", "VIEWER", "ADMIN"):
+        raise HTTPException(status_code=403, detail="ADMIN no puede asignar ese rol")
+
+    # No degradarse a si mismo
+    if requester["_id"] == target["_id"]:
+        raise HTTPException(status_code=400, detail="No podes cambiar tu propio rol")
+
+    await db["users"].update_one(
         {"_id": user_id},
         {"$set": {"role": role, "updatedAt": datetime.utcnow()}}
     )
-    if result.matched_count == 0:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return {"data": {"id": user_id, "role": role}}
 
 
 @router.post("/ensure-admin")
-async def ensure_admin(db=Depends(get_db)):
-    """Promotes the earliest user to ADMIN if no admin exists. Safe to call multiple times."""
-    users_col = db["users"]
-    admin_count = await users_col.count_documents({"role": "ADMIN"})
-    if admin_count > 0:
-        return {"data": {"action": "none", "message": "Ya existe un administrador"}}
+async def ensure_admin(req: Request, db=Depends(get_db)):
+    """Promueve al primer usuario como SUPERADMIN si no existe ninguno."""
+    sa_count = await db["users"].count_documents({"role": "SUPERADMIN"})
+    if sa_count > 0:
+        return {"data": {"action": "none", "message": "Ya existe un SUPERADMIN"}}
 
-    # Promote earliest user by createdAt
-    first = await users_col.find_one({}, sort=[("createdAt", 1)])
-    if not first:
-        return {"data": {"action": "none", "message": "No hay usuarios en el sistema"}}
+    email = req.headers.get("x-user-email", "")
+    user = await db["users"].find_one({"email": email})
+    if not user:
+        return {"data": {"action": "none", "message": "Usuario no encontrado"}}
 
-    await users_col.update_one({"_id": first["_id"]}, {"$set": {"role": "ADMIN"}})
-    return {"data": {"action": "promoted", "email": first.get("email"), "message": "Usuario promovido a ADMIN"}}
+    await db["users"].update_one(
+        {"_id": user["_id"]},
+        {"$set": {"role": "SUPERADMIN", "updatedAt": datetime.utcnow()}}
+    )
+    return {"data": {"action": "promoted", "email": email, "message": "Usuario promovido a SUPERADMIN"}}

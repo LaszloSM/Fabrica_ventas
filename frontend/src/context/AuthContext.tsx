@@ -5,7 +5,7 @@ interface User {
   email: string
   name: string
   image?: string
-  role: 'ADMIN' | 'SALES' | 'VIEWER'
+  role: 'SUPERADMIN' | 'ADMIN' | 'SALES' | 'VIEWER'
 }
 
 interface AuthCtx {

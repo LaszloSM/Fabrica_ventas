@@ -1,22 +1,24 @@
 import React, { useEffect, useState } from 'react'
-import { User, Briefcase, ShieldCheck, Bell, Cpu, ChevronRight, RefreshCw, Crown } from 'lucide-react'
+import { User, Briefcase, ShieldCheck, Bell, Cpu, ChevronRight, RefreshCw, Crown, Target, Plus, Trash2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
 
-type Tab = 'profile' | 'business-units' | 'users' | 'notifications' | 'integrations'
+type Tab = 'profile' | 'business-units' | 'users' | 'goals' | 'notifications' | 'integrations'
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'profile', label: 'Perfil y Cuenta', icon: User },
   { id: 'business-units', label: 'Unidades de Negocio', icon: Briefcase },
   { id: 'users', label: 'Usuarios y Roles', icon: ShieldCheck },
+  { id: 'goals', label: 'Metas', icon: Target },
   { id: 'notifications', label: 'Notificaciones', icon: Bell },
   { id: 'integrations', label: 'Integraciones', icon: Cpu },
 ]
 
 const ROLE_META: Record<string, { label: string; color: string; desc: string }> = {
-  ADMIN:  { label: 'Admin',   color: 'bg-blue-50 text-blue-700 border-blue-200',   desc: 'Acceso total al sistema' },
-  SALES:  { label: 'Ventas',  color: 'bg-green-50 text-green-700 border-green-200', desc: 'Gestiona oportunidades y actividades' },
-  VIEWER: { label: 'Viewer',  color: 'bg-slate-50 text-slate-600 border-slate-200', desc: 'Solo lectura' },
+  SUPERADMIN: { label: 'SuperAdmin', color: 'bg-purple-50 text-purple-700 border-purple-300', desc: 'Creador del sistema. Control total, no puede ser degradado.' },
+  ADMIN:  { label: 'Admin',   color: 'bg-blue-50 text-blue-700 border-blue-200',   desc: 'Gestiona usuarios, metas y configuracion.' },
+  SALES:  { label: 'Ventas',  color: 'bg-green-50 text-green-700 border-green-200', desc: 'Gestiona oportunidades y actividades propias.' },
+  VIEWER: { label: 'Viewer',  color: 'bg-slate-50 text-slate-600 border-slate-200', desc: 'Solo lectura de todo el sistema.' },
 }
 
 function ProfileTab() {
@@ -91,15 +93,17 @@ function ProfileTab() {
           </button>
         </div>
 
-        {/* Admin promotion section */}
-        {user?.role !== 'ADMIN' && (
+        {/* Admin / SuperAdmin promotion */}
+        {user?.role !== 'SUPERADMIN' && (
           <div className="mt-6 p-4 rounded-xl border border-amber-200 bg-amber-50">
             <div className="flex items-start gap-3">
               <Crown size={20} className="text-amber-600 shrink-0 mt-0.5" />
               <div className="flex-1">
-                <p className="text-sm font-bold text-amber-800">¿Eres el administrador del sistema?</p>
+                <p className="text-sm font-bold text-amber-800">Eres el creador del sistema?</p>
                 <p className="text-xs text-amber-700 mt-1">
-                  Si eres el primer usuario registrado, puedes activar el rol de Administrador.
+                  {user?.role === 'ADMIN'
+                    ? 'Ya eres Admin. Puedes activar SuperAdmin para tener control total.'
+                    : 'Si eres el primer usuario, reclama el rol de SuperAdmin.'}
                 </p>
                 {promoteMsg && (
                   <p className="text-xs text-amber-900 font-bold mt-2">{promoteMsg}</p>
@@ -110,7 +114,7 @@ function ProfileTab() {
                 disabled={promoting}
                 className="shrink-0 px-4 py-2 bg-amber-500 text-white rounded-lg text-xs font-bold hover:bg-amber-600 disabled:opacity-50 transition-colors"
               >
-                {promoting ? 'Verificando...' : 'Activar Admin'}
+                {promoting ? 'Verificando...' : 'Activar SuperAdmin'}
               </button>
             </div>
           </div>
@@ -130,7 +134,19 @@ function UsersTab() {
   const loadUsers = () => {
     setLoading(true)
     api.get('/users').then(d => {
-      if (d) setUsers(Array.isArray(d) ? d : d.data ?? [])
+      if (d) {
+        const list = Array.isArray(d) ? d : d.data ?? []
+        setUsers(list)
+      } else {
+        console.warn('[UsersTab] API devolvio null/error')
+        setMsg('Error al cargar usuarios. Verifica que el backend este corriendo.')
+        setTimeout(() => setMsg(''), 5000)
+      }
+      setLoading(false)
+    }).catch(err => {
+      console.error('[UsersTab] Error:', err)
+      setMsg('Error de conexion al cargar usuarios.')
+      setTimeout(() => setMsg(''), 5000)
       setLoading(false)
     })
   }
@@ -138,7 +154,8 @@ function UsersTab() {
   useEffect(() => { loadUsers() }, [])
 
   const changeRole = async (userId: string, newRole: string) => {
-    if (currentUser?.role !== 'ADMIN') {
+    const requesterRole = currentUser?.role
+    if (!requesterRole || !['SUPERADMIN', 'ADMIN'].includes(requesterRole)) {
       setMsg('Solo un administrador puede cambiar roles.')
       return
     }
@@ -148,11 +165,24 @@ function UsersTab() {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u))
       setMsg('Rol actualizado correctamente.')
       setTimeout(() => setMsg(''), 3000)
+    } else {
+      setMsg('Error al cambiar el rol. Verifica permisos.')
+      setTimeout(() => setMsg(''), 3000)
     }
     setChangingRole(null)
   }
 
-  const isAdmin = currentUser?.role === 'ADMIN'
+  const canManage = currentUser?.role === 'SUPERADMIN' || currentUser?.role === 'ADMIN'
+  const isSuperAdmin = currentUser?.role === 'SUPERADMIN'
+
+  const getAvailableRoles = (targetRole: string): string[] => {
+    if (isSuperAdmin) return ['SUPERADMIN', 'ADMIN', 'SALES', 'VIEWER']
+    if (currentUser?.role === 'ADMIN') {
+      if (targetRole === 'SUPERADMIN') return ['SUPERADMIN']
+      return ['SALES', 'VIEWER']
+    }
+    return []
+  }
 
   return (
     <div>
@@ -167,9 +197,9 @@ function UsersTab() {
         <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700 font-bold">{msg}</div>
       )}
 
-      {!isAdmin && (
+      {!canManage && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
-          Solo los administradores pueden cambiar roles de usuarios.
+          Solo los administradores (SuperAdmin o Admin) pueden cambiar roles de usuarios.
         </div>
       )}
 
@@ -201,16 +231,16 @@ function UsersTab() {
                 </div>
 
                 <div className="shrink-0">
-                  {isAdmin && !isMe ? (
+                  {canManage && !isMe ? (
                     <select
                       value={u.role ?? 'SALES'}
                       disabled={changingRole === u.id}
                       onChange={e => changeRole(u.id, e.target.value)}
                       className="text-xs border border-outline-variant rounded-lg px-2 py-1.5 bg-surface focus:outline-none focus:border-brand-primary-container disabled:opacity-50"
                     >
-                      <option value="ADMIN">Admin</option>
-                      <option value="SALES">Ventas</option>
-                      <option value="VIEWER">Viewer</option>
+                      {getAvailableRoles(u.role ?? 'SALES').map(r => (
+                        <option key={r} value={r}>{ROLE_META[r]?.label ?? r}</option>
+                      ))}
                     </select>
                   ) : (
                     <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase border ${meta.color}`}>
@@ -225,7 +255,7 @@ function UsersTab() {
       )}
 
       <div className="mt-6 p-4 rounded-xl bg-surface-container-low border border-outline-variant">
-        <p className="text-xs font-bold text-on-surface-variant uppercase mb-2">Roles del sistema</p>
+        <p className="text-xs font-bold text-on-surface-variant uppercase mb-2">Jerarquia de Roles</p>
         <div className="space-y-2">
           {Object.entries(ROLE_META).map(([key, m]) => (
             <div key={key} className="flex items-center gap-3">
@@ -235,6 +265,253 @@ function UsersTab() {
           ))}
         </div>
       </div>
+    </div>
+  )
+}
+
+const SERVICE_LABELS: Record<string, string> = {
+  CREDIMPACTO_GRUPOS: 'CredImpacto Grupos',
+  CREDIMPACTO_CREDITOS: 'CredImpacto Creditos',
+  ACADEMIA_CURSO: 'Academia Curso',
+  CONSULTORIA_PROYECTO: 'Consultoria Proyecto',
+  FUNDACION_CONVENIO: 'Fundacion Convenio',
+}
+
+const SERVICE_TYPES = [
+  { code: 'CREDIMPACTO_GRUPOS', label: 'CredImpacto Grupos' },
+  { code: 'CREDIMPACTO_CREDITOS', label: 'CredImpacto Creditos' },
+  { code: 'ACADEMIA_CURSO', label: 'Academia Curso' },
+  { code: 'CONSULTORIA_PROYECTO', label: 'Consultoria Proyecto' },
+  { code: 'FUNDACION_CONVENIO', label: 'Fundacion Convenio' },
+]
+
+function GoalsTab() {
+  const { user: currentUser } = useAuth()
+  const [goals, setGoals] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [editing, setEditing] = useState<any>(null)
+  const [msg, setMsg] = useState('')
+  const [error, setError] = useState('')
+
+  const isAdmin = currentUser?.role === 'ADMIN'
+
+  const loadGoals = () => {
+    setLoading(true)
+    api.get('/goals').then(d => {
+      if (d) setGoals(d.data ?? [])
+      setLoading(false)
+    })
+  }
+
+  useEffect(() => { loadGoals() }, [])
+
+  const submitGoal = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMsg('')
+    setError('')
+    const payload = {
+      serviceType: editing.serviceType,
+      quarter: parseInt(editing.quarter),
+      year: parseInt(editing.year),
+      targetValue: parseFloat(editing.targetValue) || 0,
+      targetUnits: parseInt(editing.targetUnits) || 0,
+      currentValue: 0,
+      currentUnits: 0,
+    }
+    try {
+      if (editing.id) {
+        await api.put(`/goals/${editing.id}`, payload)
+        setMsg('Meta actualizada.')
+      } else {
+        await api.post('/goals', payload)
+        setMsg('Meta creada.')
+      }
+      setEditing(null)
+      loadGoals()
+      setTimeout(() => setMsg(''), 3000)
+    } catch {
+      setError('Error al guardar la meta.')
+    }
+  }
+
+  const deleteGoal = async (id: string) => {
+    if (!confirm('Eliminar esta meta?')) return
+    await api.delete(`/goals/${id}`)
+    loadGoals()
+  }
+
+  const newGoal = () => {
+    setEditing({
+      id: null,
+      serviceType: 'CONSULTORIA_PROYECTO',
+      quarter: 1,
+      year: 2026,
+      targetValue: 0,
+      targetUnits: 0,
+    })
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+        Solo los administradores pueden gestionar las metas.
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h4 className="font-bold text-lg">Metas de Ventas</h4>
+          <p className="text-sm text-on-surface-variant mt-1">Configura las metas por unidad de negocio y trimestre.</p>
+        </div>
+        <button
+          onClick={loadGoals}
+          className="p-2 hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant"
+          title="Recargar"
+        >
+          <RefreshCw size={16} />
+        </button>
+      </div>
+
+      {msg && (
+        <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700 font-bold">{msg}</div>
+      )}
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700 font-bold">{error}</div>
+      )}
+
+      {editing ? (
+        <form onSubmit={submitGoal} className="p-6 rounded-xl border border-brand-primary-container bg-blue-50/30 mb-6 space-y-4">
+          <h5 className="font-bold text-sm">{editing.id ? 'Editar Meta' : 'Nueva Meta'}</h5>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Unidad de Negocio</label>
+              <select
+                value={editing.serviceType}
+                onChange={e => setEditing({ ...editing, serviceType: e.target.value })}
+                className="bg-surface border border-outline-variant rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary-container"
+              >
+                {SERVICE_TYPES.map(s => (
+                  <option key={s.code} value={s.code}>{s.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Trimestre</label>
+              <select
+                value={editing.quarter}
+                onChange={e => setEditing({ ...editing, quarter: parseInt(e.target.value) })}
+                className="bg-surface border border-outline-variant rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary-container"
+              >
+                {[1, 2, 3, 4].map(q => (
+                  <option key={q} value={q}>Q{q}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Ano</label>
+              <input
+                type="number"
+                value={editing.year}
+                onChange={e => setEditing({ ...editing, year: e.target.value })}
+                className="bg-surface border border-outline-variant rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary-container"
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Meta (COP)</label>
+              <input
+                type="number"
+                value={editing.targetValue}
+                onChange={e => setEditing({ ...editing, targetValue: e.target.value })}
+                placeholder="0"
+                min="0"
+                className="bg-surface border border-outline-variant rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary-container"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-on-surface-variant hover:bg-surface-container transition-colors"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              className="bg-brand-primary-container text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-brand-primary-container/20"
+            >
+              {editing.id ? 'Guardar Cambios' : 'Crear Meta'}
+            </button>
+          </div>
+        </form>
+      ) : (
+        <button
+          onClick={newGoal}
+          className="mb-6 flex items-center gap-2 px-4 py-2.5 bg-brand-primary-container text-white rounded-xl text-sm font-bold shadow-lg shadow-brand-primary-container/20 hover:opacity-90 transition-opacity"
+        >
+          <Plus size={16} />
+          Nueva Meta
+        </button>
+      )}
+
+      {loading ? (
+        <div className="py-8 text-center text-sm text-on-surface-variant">Cargando metas...</div>
+      ) : goals.length === 0 ? (
+        <div className="py-8 text-center">
+          <Target size={40} className="mx-auto text-outline mb-3" />
+          <p className="text-sm text-on-surface-variant">No hay metas configuradas.</p>
+          <p className="text-xs text-on-surface-variant mt-1">Crea la primera meta haciendo clic en Nueva Meta.</p>
+        </div>
+      ) : (
+        <div className="divide-y divide-outline-variant">
+          {goals.map((goal: any) => (
+            <div key={goal.id} className="py-4 flex items-center justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-bold text-on-surface">
+                  {SERVICE_LABELS[goal.serviceType] ?? goal.serviceType}
+                </div>
+                <div className="text-xs text-on-surface-variant mt-0.5">
+                  Q{goal.quarter} {goal.year}
+                  {goal.region ? ` - ${goal.region}` : ''}
+                </div>
+                <div className="text-xs text-on-surface-variant mt-0.5">
+                  Meta: ${(goal.targetValue ?? 0).toLocaleString('es-CO')} COP
+                  {goal.targetUnits ? ` - ${goal.targetUnits} unidades` : ''}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-xs font-bold text-green-600">
+                  {goal.currentValue > 0 ? `Ganado: $${(goal.currentValue ?? 0).toLocaleString('es-CO')}` : ''}
+                </span>
+                <button
+                  onClick={() => setEditing({
+                    id: goal.id,
+                    serviceType: goal.serviceType,
+                    quarter: goal.quarter,
+                    year: goal.year,
+                    targetValue: goal.targetValue ?? 0,
+                    targetUnits: goal.targetUnits ?? 0,
+                  })}
+                  className="px-3 py-1.5 text-xs font-bold rounded-lg border border-outline-variant hover:bg-surface-container transition-colors"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => deleteGoal(goal.id)}
+                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -280,6 +557,7 @@ export function SettingsView() {
       </div>
     ),
     users: <UsersTab />,
+    goals: <GoalsTab />,
     notifications: (
       <div>
         <h4 className="font-bold text-lg mb-2">Notificaciones</h4>

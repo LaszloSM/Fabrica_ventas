@@ -1,8 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from app.database import get_db
 from app.services.deal_service import DealService
-from datetime import datetime
-import uuid
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
 
@@ -49,24 +47,8 @@ async def get_metrics(year: int = Query(2026), db=Depends(get_db)):
         for s in STAGE_ORDER if s != "PERDIDO"
     ]
 
-    # Goals seed si no existen
+    # Solo se usan metas creadas manualmente por el admin
     goals_col = db["goals"]
-    if await goals_col.count_documents({"year": year}) == 0:
-        for q in range(1, 5):
-            for svc in SERVICE_TYPES:
-                await goals_col.insert_one({
-                    "_id": f"goal_{svc}_{year}_Q{q}_{uuid.uuid4().hex[:6]}",
-                    "serviceType": svc,
-                    "quarter": q,
-                    "year": year,
-                    "targetValue": 50_000_000,
-                    "targetUnits": 5,
-                    "currentValue": 0,
-                    "currentUnits": 0,
-                    "createdAt": datetime.utcnow(),
-                    "updatedAt": datetime.utcnow(),
-                })
-
     # Active pipeline deals (not lost) contribute to goal progress
     active_deals = [d for d in deals if d.stage != "PERDIDO"]
     goals_docs = await goals_col.find({"year": year}).to_list(length=None)
