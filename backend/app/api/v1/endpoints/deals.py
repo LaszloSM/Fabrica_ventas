@@ -223,15 +223,20 @@ async def delete_deal(deal_id: str, service: DealService = Depends(get_deal_serv
     await service.update_deal(deal_id, {"deleted": True})
 
 
+from pydantic import BaseModel as _BaseModel
+
+class _MoveStageBody(_BaseModel):
+    stage: str
+
 @router.post("/{deal_id}/move-stage")
 async def move_deal_stage(
     deal_id: str,
-    new_stage: str,
+    body: _MoveStageBody,
     req: Request,
     service: DealService = Depends(get_deal_service)
 ):
     user_id = req.headers.get("x-user-id", "user_default")
-    deal = await service.move_to_stage(deal_id, new_stage, user_id)
+    deal = await service.move_to_stage(deal_id, body.stage, user_id)
     if not deal:
         raise HTTPException(status_code=404, detail="Deal no encontrado")
     return {"data": deal.model_dump(by_alias=True)}
