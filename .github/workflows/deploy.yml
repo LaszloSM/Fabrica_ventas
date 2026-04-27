@@ -7,9 +7,9 @@ on:
 
 env:
   REGISTRY: coimpactobacr.azurecr.io
-  RESOURCE_GROUP: coimpactob-rg
-  BACKEND_APP: coimpactob-backend
-  FRONTEND_APP: coimpactob-frontend
+  RESOURCE_GROUP: coimpactob-crm-prod
+  BACKEND_APP: coimpactob-api-prod
+  FRONTEND_APP: coimpactob-web-prod
 
 jobs:
   deploy-backend:
@@ -27,8 +27,8 @@ jobs:
         run: |
           az acr build \
             --registry coimpactobacr \
-            --image ${{ env.BACKEND_APP }}:${{ github.sha }} \
-            --image ${{ env.BACKEND_APP }}:latest \
+            --image coimpactob-api-prod:${{ github.sha }} \
+            --image coimpactob-api-prod:latest \
             ./backend
 
       - name: Deploy backend to Container Apps
@@ -54,8 +54,8 @@ jobs:
         run: |
           az acr build \
             --registry coimpactobacr \
-            --image ${{ env.FRONTEND_APP }}:${{ github.sha }} \
-            --image ${{ env.FRONTEND_APP }}:latest \
+            --image coimpactob-web-prod:${{ github.sha }} \
+            --image coimpactob-web-prod:latest \
             ./frontend
 
       - name: Deploy frontend to Container Apps
