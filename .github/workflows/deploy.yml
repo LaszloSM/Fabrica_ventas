@@ -10,6 +10,8 @@ env:
   RESOURCE_GROUP: coimpactob-crm-prod
   BACKEND_APP: coimpactob-api-prod
   FRONTEND_APP: coimpactob-web-prod
+  FRONTEND_URL: https://coimpactob-web-prod.lemonmushroom-85e2b96f.westus2.azurecontainerapps.io
+  BACKEND_URL: https://coimpactob-api-prod.lemonmushroom-85e2b96f.westus2.azurecontainerapps.io
 
 jobs:
   deploy-backend:
@@ -36,7 +38,15 @@ jobs:
           az containerapp update \
             --name ${{ env.BACKEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.REGISTRY }}/${{ env.BACKEND_APP }}:${{ github.sha }}
+            --image ${{ env.REGISTRY }}/coimpactob-api-prod:${{ github.sha }} \
+            --set-env-vars \
+              APP_NAME="CoimpactoB CRM API" \
+              DEBUG="false" \
+              USE_MOCK_DB="false" \
+              COSMOS_CONNECTION_STRING="${{ secrets.COSMOS_CONNECTION_STRING }}" \
+              COSMOS_DATABASE="fabrica_ventas" \
+              SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+              CORS_ORIGINS='["${{ env.FRONTEND_URL }}","http://localhost:3000","http://localhost:8080"]'
 
   deploy-frontend:
     name: Build & Deploy Frontend
@@ -63,4 +73,11 @@ jobs:
           az containerapp update \
             --name ${{ env.FRONTEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
-            --image ${{ env.REGISTRY }}/${{ env.FRONTEND_APP }}:${{ github.sha }}
+            --image ${{ env.REGISTRY }}/coimpactob-web-prod:${{ github.sha }} \
+            --set-env-vars \
+              NODE_ENV="production" \
+              FASTAPI_BACKEND_URL="${{ env.BACKEND_URL }}" \
+              GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+              GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+              SESSION_SECRET="${{ secrets.SESSION_SECRET }}" \
+              PORT="8080"
