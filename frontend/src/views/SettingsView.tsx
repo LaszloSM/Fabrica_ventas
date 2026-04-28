@@ -37,7 +37,15 @@ function ProfileTab() {
     setPromoting(true)
     const res = await api.post('/users/ensure-admin', {})
     if (res?.data?.action === 'promoted') {
-      setPromoteMsg(`✅ ${res.data.message} — Cierra sesión y vuelve a entrar para ver el cambio.`)
+      // Refresh session to get updated role immediately — no logout needed
+      try {
+        const sessionRes = await fetch('/auth/session', { credentials: 'include' })
+        if (sessionRes.ok) {
+          const sessionData = await sessionRes.json()
+          if (sessionData.user) setUser(sessionData.user)
+        }
+      } catch { /* ignore */ }
+      setPromoteMsg('✅ Rol SuperAdmin activado correctamente.')
     } else {
       setPromoteMsg(res?.data?.message ?? 'Sin cambios necesarios.')
     }
