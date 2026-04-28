@@ -209,12 +209,51 @@ class ImportService:
         self.stats["prospects"] += 1
         return prospect_id
 
-    async def _create_contact(self, prospect_id: str, nombre: str, cargo: str,
-                              correo: str, celular: str, linkedin: str) -> Optional[str]:
-        """Upsert contacto: si existe por email lo retorna, si no lo crea."""
+    async def _create_contact(
+        self,
+        prospect_id: str,
+        nombre: str,
+        cargo: str,
+        correo: str,
+        celular: str,
+        linkedin: str,
+        country: str = "Colombia",
+        city: str = "",
+        impact_areas: str = "",
+        temperature: str = "",
+        notes: str = "",
+        sequence_row: dict = None,
+    ) -> Optional[str]:
+        """Upsert contacto. Retorna contact_id existente o crea uno nuevo."""
         email_key = correo.lower() if correo else None
         if email_key and email_key in self.email_index:
             return self.email_index[email_key]
+
+        # Normalize temperature
+        temp_map = {"caliente": "CALIENTE", "tibio": "TIBIO", "frio": "FRIO", "frío": "FRIO"}
+        temp_value = temp_map.get(temperature.strip().lower()) if temperature else None
+
+        # Build sequence object from row data
+        seq = {}
+        if sequence_row:
+            step_cols = {
+                "linkedinInviteSent": "Envio de invitacion  Linkdln",
+                "linkedinAccepted":   "Aceptacion Linkdln",
+                "linkedinMessage":    "Mensaje Linkdln",
+                "email1":             "Correo 1",
+                "email2":             "Correo 2",
+                "email3":             "Correo 3",
+                "whatsapp":           "Whatsapp mensaje",
+                "call":               "LLamada ",
+                "firstMeeting":       "Primera reunión",
+                "followUpEmail":      "Mail de seguimiento",
+                "proposalPrep":       "Preparación de propuesta ",
+                "proposalMeeting":    "Reunión de propuesta ",
+            }
+            for key, col in step_cols.items():
+                raw = _c(sequence_row.get(col, ""))
+                done = _done(raw) if raw else False
+                seq[key] = {"done": done, "doneAt": self.now if done else None}
 
         contact_id = _id("cnt")
         await self.db["contacts"].insert_one({
@@ -226,6 +265,12 @@ class ImportService:
             "phone": re.sub(r"[^\d+]", "", celular)[:20] if celular else None,
             "linkedinUrl": linkedin if _is_linkedin(linkedin) else None,
             "isPrimary": True,
+            "country": country or "Colombia",
+            "city": city or None,
+            "impactAreas": impact_areas or None,
+            "temperature": temp_value,
+            "notes": notes or None,
+            "sequence": seq if seq else None,
             "createdAt": self.now,
             "updatedAt": self.now,
         })
@@ -486,6 +531,12 @@ class ImportService:
                 correo=correo,
                 celular=celular,
                 linkedin=linkedin,
+                country=pais,
+                city=ciudad,
+                impact_areas=_c(row.get("Áreas de impacto", "")),
+                temperature=estado,
+                notes=_c(row.get("Comentarios", "")),
+                sequence_row=row,
             )
 
             # Crear deals (uno por service type)

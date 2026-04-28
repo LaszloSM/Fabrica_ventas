@@ -7,6 +7,7 @@ class Activity(BaseModel):
     id: Optional[str] = Field(None, alias="_id")
     dealId: Optional[str] = None
     prospectId: Optional[str] = None
+    contactId: Optional[str] = None
     type: str = Field(...)
     templateUsed: Optional[str] = None
     outcome: Optional[str] = None
