@@ -3,7 +3,7 @@ import { User, Briefcase, ShieldCheck, Bell, Cpu, ChevronRight, RefreshCw, Crown
 import { useAuth } from '../context/AuthContext'
 import { api } from '../lib/api'
 
-type Tab = 'profile' | 'business-units' | 'users' | 'goals' | 'notifications' | 'integrations'
+type Tab = 'profile' | 'business-units' | 'users' | 'goals' | 'notifications' | 'integrations' | 'admin-tools'
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'profile', label: 'Perfil y Cuenta', icon: User },
@@ -12,6 +12,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
   { id: 'goals', label: 'Metas', icon: Target },
   { id: 'notifications', label: 'Notificaciones', icon: Bell },
   { id: 'integrations', label: 'Integraciones', icon: Cpu },
+  { id: 'admin-tools', label: 'Herramientas Admin', icon: Cpu },
 ]
 
 const ROLE_META: Record<string, { label: string; color: string; desc: string }> = {
@@ -537,7 +538,66 @@ const BUSINESS_UNITS = [
   { name: 'Fundación Experiencia',   code: 'FUNDACION_EXPERIENCIA',      color: 'bg-sky-50 text-sky-700' },
 ]
 
+function AdminToolsTab() {
+  const { user } = useAuth()
+  const [result, setResult] = useState<string>('')
+  const [running, setRunning] = useState(false)
+
+  if (user?.role !== 'SUPERADMIN') return null
+
+  const resetValues = async (dryRun: boolean) => {
+    setRunning(true)
+    setResult('')
+    const res = await api.post(`/deals/admin/reset-values?dry_run=${dryRun}`, {})
+    if (res?.data) {
+      const d = res.data
+      setResult(dryRun
+        ? `Vista previa: ${d.would_reset} deals serían reseteados.`
+        : `✅ ${d.modified} deals reseteados. ${d.skipped} no modificados (ya tenían valor real).`
+      )
+    } else {
+      setResult('❌ Error al ejecutar la operación.')
+    }
+    setRunning(false)
+  }
+
+  return (
+    <div>
+      <h4 className="font-bold text-lg mb-2">Herramientas de Admin</h4>
+      <p className="text-sm text-on-surface-variant mb-6">Solo visible para SuperAdmin.</p>
+
+      <div className="p-4 rounded-xl border border-red-200 bg-red-50">
+        <p className="text-sm font-bold text-red-800 mb-1">Resetear valores de seed</p>
+        <p className="text-xs text-red-700 mb-3">
+          Elimina los valores de $150M/$35M insertados por scripts de prueba.
+          Solo afecta deals de importación sin valor real asignado.
+        </p>
+        {result && (
+          <p className="text-xs font-bold text-red-900 mb-3">{result}</p>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={() => resetValues(true)}
+            disabled={running}
+            className="px-3 py-1.5 text-xs font-bold border border-red-300 text-red-700 rounded-lg hover:bg-red-100 disabled:opacity-50"
+          >
+            Vista Previa
+          </button>
+          <button
+            onClick={() => resetValues(false)}
+            disabled={running}
+            className="px-3 py-1.5 text-xs font-bold bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            {running ? 'Ejecutando...' : 'Ejecutar Reset'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function SettingsView() {
+  const { user: currentUser } = useAuth()
   const [tab, setTab] = useState<Tab>('profile')
 
   const tabContent: Record<Tab, React.ReactNode> = {
@@ -593,6 +653,7 @@ export function SettingsView() {
         </div>
       </div>
     ),
+    'admin-tools': <AdminToolsTab />,
   }
 
   return (
@@ -604,7 +665,7 @@ export function SettingsView() {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="space-y-2">
-          {TABS.map(t => (
+          {TABS.filter(t => t.id !== 'admin-tools' || currentUser?.role === 'SUPERADMIN').map(t => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
