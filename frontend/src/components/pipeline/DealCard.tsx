@@ -41,7 +41,9 @@ export function DealCard({ deal, onClick, dragHandleProps }: Props) {
       </div>
       <p className="text-xs text-on-surface-variant leading-relaxed">{service}</p>
       <div className="flex justify-between items-center mt-4 pt-4 border-t border-outline-variant/30">
-        <span className="text-sm font-bold">{fmt(deal.value ?? 0)}</span>
+        <span className="text-sm font-bold">
+          {deal.value != null ? fmt(deal.value) : '—'}
+        </span>
         <div className="w-6 h-6 rounded-full bg-brand-primary-container flex items-center justify-center text-[10px] text-white font-bold">
           {assignee[0].toUpperCase()}
         </div>

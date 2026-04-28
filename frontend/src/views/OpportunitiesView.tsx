@@ -60,7 +60,9 @@ export function OpportunitiesView({ onDealClick, onNewDeal }: Props) {
     },
     {
       label: 'Valor', key: 'value',
-      render: val => <span className="text-sm font-bold">${(val ?? 0).toLocaleString('es-CO')} COP</span>,
+      render: val => val != null
+        ? <span className="text-sm font-bold">${(val as number).toLocaleString('es-CO')} COP</span>
+        : <span className="text-sm text-on-surface-variant">—</span>,
     },
     {
       label: 'Responsable', key: 'assignedToName',

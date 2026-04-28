@@ -123,7 +123,9 @@ function AccountDetail({ account, onClose, onDealClick }: {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-bold">{fmt(deal.value ?? 0)}</span>
+                    <span className="text-sm font-bold">
+                      {deal.value != null ? fmt(deal.value) : '—'}
+                    </span>
                     <ChevronRight size={14} className="text-on-surface-variant" />
                   </div>
                 </div>

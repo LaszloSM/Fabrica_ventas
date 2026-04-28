@@ -183,7 +183,9 @@ export function DashboardView({ onDealClick }: Props) {
                   <div className="text-sm font-bold text-on-surface">{deal.nextAction || (deal.serviceType ?? '').replace(/_/g, ' ')}</div>
                   <div className="text-xs text-on-surface-variant mt-0.5">{deal.prospectName || deal.stage}</div>
                 </div>
-                <span className="text-sm font-bold">{fmt(deal.value ?? 0)}</span>
+                <span className="text-sm font-bold">
+                  {deal.value != null ? fmt(deal.value) : '—'}
+                </span>
               </div>
             ))}
           </div>

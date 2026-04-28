@@ -35,7 +35,11 @@ export const OpportunityDetail = ({ opportunity, onBack }: DetailProps) => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="glass-card p-6 border-l-4 border-l-brand-primary-container">
               <div className="text-xs font-bold text-on-surface-variant uppercase mb-1">Valor Estimado</div>
-              <div className="text-2xl font-bold text-on-surface">${opportunity.value.toLocaleString()} COP</div>
+              <div className="text-2xl font-bold text-on-surface">
+                {opportunity.value != null
+                  ? `$${opportunity.value.toLocaleString('es-CO')} COP`
+                  : '—'}
+              </div>
             </div>
             <div className="glass-card p-6 border-l-4 border-l-brand-secondary">
               <div className="text-xs font-bold text-on-surface-variant uppercase mb-1">Probabilidad</div>
