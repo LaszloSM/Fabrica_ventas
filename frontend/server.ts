@@ -2,6 +2,7 @@ import express from 'express'
 import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import session from 'express-session'
+import MongoStore from 'connect-mongo'
 import { OAuth2Client } from 'google-auth-library'
 import path from 'path'
 import { fileURLToPath } from 'url'
@@ -21,14 +22,27 @@ app.set('trust proxy', 1)
 app.use(cors({ origin: true, credentials: true }))
 app.use(cookieParser())
 app.use(express.json())
+
+const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60 // 7 days
+const COSMOS_CONN = process.env.COSMOSDB_CONN_STR
+
 app.use(session({
   secret: process.env.SESSION_SECRET || 'coimpactob-secret-change-me',
   resave: false,
   saveUninitialized: false,
+  store: COSMOS_CONN
+    ? MongoStore.create({
+        mongoUrl: COSMOS_CONN,
+        dbName: 'fabrica_ventas',
+        collectionName: 'express_sessions',
+        ttl: SESSION_TTL_SECONDS,
+        autoRemove: 'disabled',
+      })
+    : undefined,
   cookie: {
     secure: isProd,
     httpOnly: true,
-    maxAge: 7 * 24 * 60 * 60 * 1000,
+    maxAge: SESSION_TTL_SECONDS * 1000,
     sameSite: isProd ? 'none' : 'lax',
   }
 }))
@@ -41,27 +55,46 @@ app.post('/auth/google', async (req, res) => {
     const ticket = await oauthClient.verifyIdToken({ idToken: credential, audience: GOOGLE_CLIENT_ID })
     const payload = ticket.getPayload()!
 
-    // Get user role from backend
+    // Get user role from backend with retry
     let userRole = 'SALES'
-    try {
-      const userRes = await fetch(`${FASTAPI_URL}${API_PREFIX}/users/me`, {
-        headers: {
-          'x-user-email': payload.email!,
-          'x-user-name': payload.name ?? '',
-          'x-user-id': payload.sub,
-          'x-user-role': 'SALES',
+    let userData: { role?: string; id?: string } | null = null
+    let backendReachable = false
+
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const userRes = await fetch(`${FASTAPI_URL}${API_PREFIX}/users/me`, {
+          headers: {
+            'x-user-email': payload.email!,
+            'x-user-name': payload.name ?? '',
+            'x-user-id': payload.sub,
+            'x-user-role': 'SALES',
+          }
+        })
+        if (userRes.ok) {
+          userData = await userRes.json()
+          userRole = userData?.role ?? 'SALES'
+          backendReachable = true
+          break
         }
-      })
-      if (userRes.ok) {
-        const userData = await userRes.json()
-        userRole = userData.role ?? 'SALES'
+      } catch {
+        // retry
+        await new Promise(r => setTimeout(r, 500))
       }
-    } catch {
-      // backend not reachable, default to SALES
     }
+
+    if (!backendReachable) {
+      console.error('[auth] Backend unreachable during login for:', payload.email)
+      return res.status(503).json({
+        ok: false,
+        error: 'El sistema de usuarios no está disponible. Intenta nuevamente en unos segundos.'
+      })
+    }
+
+    const dbUserId = userData?.id ?? null
 
     ;(req.session as any).user = {
       id: payload.sub,
+      dbId: dbUserId,
       email: payload.email,
       name: payload.name,
       image: payload.picture,
@@ -75,9 +108,35 @@ app.post('/auth/google', async (req, res) => {
   }
 })
 
-app.get('/auth/session', (req, res) => {
+app.get('/auth/session', async (req, res) => {
   const user = (req.session as any).user
   if (!user) return res.status(401).json({ user: null })
+
+  // Sync role from DB (repairs sessions created during a backend outage)
+  const lastSync: number = (req.session as any)._roleSyncedAt ?? 0
+  const ONE_MINUTE = 60_000
+  if (Date.now() - lastSync > ONE_MINUTE) {
+    try {
+      const userRes = await fetch(`${FASTAPI_URL}${API_PREFIX}/users/me`, {
+        headers: {
+          'x-user-email': user.email,
+          'x-user-name': user.name ?? '',
+        'x-user-id': user.dbId ?? user.id,
+          'x-user-role': user.role,
+        }
+      })
+      if (userRes.ok) {
+        const data = await userRes.json()
+        if (data.role) user.role = data.role
+        if (data.id)   user.dbId = data.id
+        ;(req.session as any).user = user
+        ;(req.session as any)._roleSyncedAt = Date.now()
+      }
+    } catch {
+      // backend unreachable — use cached role, retry next request
+    }
+  }
+
   res.json({ user })
 })
 
