@@ -211,6 +211,9 @@ async def update_deal(
     db=Depends(get_db)
 ):
     update_data = deal_update.model_dump(exclude_unset=True)
+    # Stamp valueSetAt whenever a user explicitly sets a value
+    if 'value' in update_data and update_data['value'] is not None:
+        update_data['valueSetAt'] = datetime.utcnow()
     deal = await service.update_deal(deal_id, update_data)
     if not deal:
         raise HTTPException(status_code=404, detail="Deal no encontrado")
@@ -264,3 +267,40 @@ async def mark_deal_lost(
     if not deal:
         raise HTTPException(status_code=404, detail="Deal no encontrado")
     return {"data": deal.model_dump(by_alias=True)}
+
+
+SEED_VALUES = {150_000_000.0, 35_000_000.0}
+
+@router.post("/admin/reset-values")
+async def reset_seed_values(
+    req: Request,
+    dry_run: bool = Query(False, description="Si true, reporta sin modificar"),
+    db=Depends(get_db)
+):
+    """
+    SUPERADMIN only. Resetea valores de deals que provienen de seed/import y
+    nunca fueron editados por un usuario real. Usa dry_run=true para previsualizar.
+    """
+    requester_role = req.headers.get("x-user-role", "")
+    if requester_role != "SUPERADMIN":
+        raise HTTPException(status_code=403, detail="Solo SUPERADMIN puede ejecutar esta acción")
+
+    query = {
+        "valueSetAt": None,
+        "$or": [
+            {"value": {"$in": list(SEED_VALUES)}},
+            {"source": "csv_import"},
+        ]
+    }
+
+    count = await db["deals"].count_documents(query)
+
+    if dry_run:
+        return {"data": {"dry_run": True, "would_reset": count, "modified": 0}}
+
+    result = await db["deals"].update_many(
+        query,
+        {"$set": {"value": None, "ponderatedValue": None, "updatedAt": datetime.utcnow()}}
+    )
+
+    return {"data": {"dry_run": False, "modified": result.modified_count, "skipped": count - result.modified_count}}

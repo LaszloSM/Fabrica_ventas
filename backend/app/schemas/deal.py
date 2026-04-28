@@ -9,14 +9,13 @@ class DealCreate(BaseModel):
     line: Optional[str] = None
     segment: Optional[str] = None
     region: Optional[str] = None
-    value: Optional[float] = 0.0
+    value: Optional[float] = None
     quarter: Optional[int] = None
     stage: Optional[str] = "PROSPECTO_IDENTIFICADO"
     notes: Optional[str] = None
-
-    problem: Optional[str] = Field(default="", max_length=500)
-    benefit: Optional[str] = Field(default="", max_length=500)
-    nextAction: Optional[str] = Field(default="", max_length=500)
+    problem: Optional[str] = Field(default=None, max_length=500)
+    benefit: Optional[str] = Field(default=None, max_length=500)
+    nextAction: Optional[str] = Field(default=None, max_length=500)
     nextActionDate: Optional[datetime] = None
     assignedTo: Optional[str] = None
     proyectos: Optional[str] = None
@@ -25,6 +24,7 @@ class DealCreate(BaseModel):
 class DealUpdate(BaseModel):
     stage: Optional[str] = None
     value: Optional[float] = None
+    valueSetAt: Optional[datetime] = None
     problem: Optional[str] = None
     benefit: Optional[str] = None
     nextAction: Optional[str] = None
@@ -46,8 +46,9 @@ class DealResponse(BaseModel):
     problem: str
     benefit: str
     nextAction: str
-    nextActionDate: datetime
+    nextActionDate: Optional[datetime]
     assignedTo: Optional[str]
+    valueSetAt: Optional[datetime] = None
     createdAt: datetime
     updatedAt: datetime
 
