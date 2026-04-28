@@ -29,6 +29,8 @@ Additionally, the session stores `id: payload.sub` (Google OAuth subject ID) ins
 - Install `connect-mongo` in `frontend/`
 - Configure `MongoStore` using the same `COSMOSDB_CONN_STR` environment variable already used by the backend
 - Sessions survive server restarts; TTL matches the cookie `maxAge` (7 days)
+- **CosmosDB TTL caveat**: CosmosDB does not auto-create TTL indexes the same way MongoDB Atlas does. The `MongoStore` `ttl` option will be set, but if TTL cleanup does not work (CosmosDB limitation), sessions will expire via the cookie `maxAge` client-side instead. This is acceptable — stale server-side sessions simply won't match the cookie.
+- **Cutover**: On first deploy with the new store, all existing in-memory sessions are lost. This is expected and acceptable — users will be prompted to log in once.
 
 **1b. Store DB user ID in session**
 - After `GET /users/me` succeeds at login, store `dbId: userData.id` alongside `id: payload.sub`
@@ -66,6 +68,7 @@ Root cause: if `GET /users/me` failed silently at login time, the `users` collec
 
 **2b. Auto-create user on session check**
 - `GET /auth/session` in `server.ts`: if session exists but backend returns 404 for this user, call `GET /users/me` to create/recover them and update the session role
+- If backend returns 500 or is unreachable, skip role sync and return the cached session role (don't break the session — just use stale data with a 1-minute retry cooldown stored in session)
 - This repairs sessions created during a backend outage
 
 **2c. Frontend: refresh user after SuperAdmin promotion**
@@ -93,8 +96,10 @@ The existing `backend/scripts/fix_deal_values.py` script was written for this ex
 
 **3a. Reset existing values via admin API**
 - Add `POST /api/deals/admin/reset-values` endpoint (SUPERADMIN only)
-- Runs the same logic as `fix_deal_values.py`: sets `value: null, ponderatedValue: null` on all deals
-- Returns count of modified records
+- **Scoped reset**: only resets deals where `value` matches the known seed values (150000000 or 35000000) OR where the deal has `source: "csv_import"` and no `valueSetAt` timestamp — preserving any legitimate value a real user may have set
+- The `valueSetAt` field (datetime) is added to the Deal document: it is set to `now()` whenever a user explicitly saves a value through the deal edit form. Deals from CSV import have `valueSetAt: null`. This is the authoritative flag for "a real user set this value."
+- Dry-run mode: `?dry_run=true` returns count without modifying anything
+- Returns `{ modified: N, skipped: M }` so the admin can verify before committing
 - One-time use; can be triggered from Settings → an "Herramientas de Admin" section
 
 **3b. UI: display null values correctly**
@@ -170,13 +175,17 @@ No migration needed — MongoDB is schema-less; existing documents just lack the
 
 ### 4b. Import service update
 
-Map all previously-lost CSV columns to the new Contact fields:
+**File:** `backend/app/services/import_service.py` (primary) + `backend/app/api/v1/endpoints/import_data.py` (secondary)
+
+Map all previously-lost CSV columns to the new Contact fields in `_create_contact()`:
 - `Áreas de impacto` → `impactAreas`
 - `Estado` → `temperature` (caliente→CALIENTE, tibio→TIBIO, frío/frio→FRIO)
 - `País` → `contact.country` (in addition to prospect.region)
 - `Ciudad Principal` → `contact.city`
 - `Comentarios` → `contact.notes`
-- Sequence columns → `sequence.*` with `done: _done(value), doneAt: now if done else null`
+- Sequence columns → `sequence.*` with `done: _done(value), doneAt: import_timestamp if done else null`
+  - Note: `doneAt` will be the import timestamp, not the historical date (CSV does not carry dates for sequence steps). This is a known limitation — the data reflects that the action was done, not exactly when.
+- `_create_contact()` signature extended to accept these new fields; callers (`import_from_files`) updated accordingly
 
 ### 4c. Backend API changes
 
@@ -184,14 +193,20 @@ Map all previously-lost CSV columns to the new Contact fields:
 - `GET /contacts`: already returns full document — new fields auto-included
 - `PATCH /contacts/:id`: already accepts arbitrary payload — new fields auto-accepted
 - New endpoint: `POST /contacts/:id/sequence/:step` — marks a sequence step done/undone
-  - When marking done: creates an Activity record (`type: step name, dealId: first active deal for this contact, doneAt: now`)
-  - When undoing: does NOT delete the activity (history is preserved)
+  - When marking done:
+    - "First active deal" = the most recently updated deal for this contact's `prospectId` where `stage` is not GANADO or PERDIDO. If multiple exist, use the most recently updated. If none exist, create the Activity with `dealId: null`.
+    - Creates an Activity record (`type: step name, dealId: resolved above, doneAt: now`)
+    - **Deduplication**: before inserting the Activity, check if one already exists for the same `(contactId, type)` — if so, update its `doneAt` rather than inserting a new one. This prevents duplicate Activity records from repeated check/uncheck cycles.
+  - When marking undone: sets `done: false, doneAt: null` on the sequence step; the existing Activity record is kept (history preserved)
   - Returns updated contact
 
 **Contacts list endpoint: add new filter params:**
 - `?temperature=CALIENTE` — filter by temperature
 - `?country=Colombia` — filter by country
 - Search query extended to also match `city`, `country`, `impactAreas`
+
+**New endpoint:**
+- `GET /contacts/countries` — returns sorted list of distinct non-null `country` values from the contacts collection. Lightweight; result cached client-side on first load.
 
 ### 4d. Frontend: Extended ContactsView (table)
 
@@ -203,7 +218,7 @@ New columns added to the contacts table:
 
 New filters in the toolbar:
 - Temperature filter (All / Caliente / Tibio / Frío)
-- Country filter (dropdown)
+- Country filter (dropdown) — populated from a static list of values that appear in the DB (fetched once on mount via `GET /contacts/countries` — a lightweight distinct query returning only unique non-null country values, cached client-side)
 
 ### 4e. Frontend: Contact Detail Slide-Over Panel
 
