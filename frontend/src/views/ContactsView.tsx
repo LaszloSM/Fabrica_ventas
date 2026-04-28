@@ -152,7 +152,7 @@ function NewContactModal({ isOpen, onClose, onSaved }: {
                     <div className="flex items-center gap-2 text-sm text-green-700 font-bold">
                       <Building2 size={14} /> {form.prospectSearch}
                     </div>
-                    <button onClick={() => set('prospectId', '') || set('prospectSearch', '')} className="text-green-600 hover:text-green-800">
+                    <button onClick={() => { set('prospectId', ''); set('prospectSearch', '') }} className="text-green-600 hover:text-green-800">
                       <X size={14} />
                     </button>
                   </div>
