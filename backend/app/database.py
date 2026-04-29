@@ -35,6 +35,10 @@ async def close_mongo_connection():
         logger.info("✅ Desconectado de DB")
 
 async def get_db() -> AsyncIOMotorDatabase:
+    global db
+    if db is None:
+        logger.warning("⚠️ db is None, attempting reconnect…")
+        await connect_to_mongo()
     if db is None:
         from fastapi import HTTPException
         raise HTTPException(status_code=503, detail="Base de datos no disponible")

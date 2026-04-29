@@ -24,6 +24,10 @@ console.log(`[startup] FASTAPI_URL        = ${FASTAPI_URL}`)
 console.log(`[startup] GOOGLE_CLIENT_ID   = ${GOOGLE_CLIENT_ID ? 'SET' : 'UNSET ⚠️'}`)
 console.log(`[startup] COSMOSDB_CONN_STR  = ${process.env.COSMOSDB_CONN_STR ? 'SET' : '(unset — in-memory sessions)'}`)
 console.log(`[startup] SESSION_SECRET     = ${process.env.SESSION_SECRET ? 'SET' : '(using default)'}`)
+
+if (isProd && /localhost|127\.0\.0\.1/.test(FASTAPI_URL)) {
+  console.error(`[startup] ⚠️  PRODUCTION but FASTAPI_URL points to localhost (${FASTAPI_URL}). Backend will be unreachable.`)
+}
 // ─────────────────────────────────────────────────────────────────────
 
 const isProd = process.env.NODE_ENV === 'production'
@@ -32,6 +36,12 @@ app.set('trust proxy', 1)
 app.use(cors({ origin: true, credentials: true }))
 app.use(cookieParser())
 app.use(express.json())
+
+// Fix Google Sign-In postMessage warnings in cross-origin popups
+app.use((req, res, next) => {
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups')
+  next()
+})
 
 const SESSION_TTL_SECONDS = 7 * 24 * 60 * 60 // 7 days
 const COSMOS_CONN = process.env.COSMOSDB_CONN_STR

@@ -24,8 +24,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetch('/auth/session', { credentials: 'include' })
-      .then(r => r.ok ? r.json() : null)
+      .then(r => {
+        if (r.status === 401) return { user: null }
+        return r.ok ? r.json() : { user: null }
+      })
       .then(d => setUser(d?.user ?? null))
+      .catch(() => setUser(null))
       .finally(() => setLoading(false))
   }, [])
 

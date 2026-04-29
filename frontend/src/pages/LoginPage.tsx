@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { GoogleLogin } from '@react-oauth/google'
 import { loginWithGoogle, useAuth } from '../context/AuthContext'
 
 export function LoginPage() {
   const { setUser } = useAuth()
+  const [error, setError] = useState<string | null>(null)
 
   return (
     <div className="min-h-screen bg-surface flex items-center justify-center">
@@ -25,14 +26,25 @@ export function LoginPage() {
 
         <GoogleLogin
           onSuccess={async (res) => {
+            setError(null)
             if (res.credential) {
               const user = await loginWithGoogle(res.credential)
-              if (user) setUser(user)
+              if (user) {
+                setUser(user)
+              } else {
+                setError('El sistema de usuarios no está disponible. Intenta nuevamente en unos segundos.')
+              }
             }
           }}
-          onError={() => console.error('Login fallido')}
+          onError={() => setError('No se pudo iniciar sesión con Google. Intenta de nuevo.')}
           useOneTap
         />
+
+        {error && (
+          <p className="text-sm text-red-500 text-center leading-snug">
+            {error}
+          </p>
+        )}
 
         <p className="text-xs text-on-surface-variant text-center">
           Solo cuentas autorizadas de CoimpactoB pueden acceder.
