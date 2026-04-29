@@ -46,12 +46,16 @@ jobs:
           COSMOS_CONN: ${{ secrets.COSMOS_CONNECTION_STRING }}
           APP_SECRET: ${{ secrets.SECRET_KEY }}
         run: |
-          az containerapp secret set \
-            --name ${{ env.BACKEND_APP }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --secrets \
-              cosmos-conn="$COSMOS_CONN" \
-              app-secret="$APP_SECRET"
+          if [ -n "$COSMOS_CONN" ] && [ -n "$APP_SECRET" ]; then
+            az containerapp secret set \
+              --name ${{ env.BACKEND_APP }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --secrets \
+                cosmos-conn="$COSMOS_CONN" \
+                app-secret="$APP_SECRET"
+          else
+            echo "⚠️ Skipping secret update — COSMOS_CONNECTION_STRING or SECRET_KEY not set in GitHub Secrets"
+          fi
 
       - name: Deploy backend to Container Apps
         run: |
@@ -104,13 +108,17 @@ jobs:
           GOOGLE_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
           SESSION_SEC: ${{ secrets.SESSION_SECRET }}
         run: |
-          az containerapp secret set \
-            --name ${{ env.FRONTEND_APP }} \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --secrets \
-              cosmos-conn="$COSMOS_CONN" \
-              google-client-secret="$GOOGLE_SECRET" \
-              session-secret="$SESSION_SEC"
+          if [ -n "$COSMOS_CONN" ] && [ -n "$GOOGLE_SECRET" ] && [ -n "$SESSION_SEC" ]; then
+            az containerapp secret set \
+              --name ${{ env.FRONTEND_APP }} \
+              --resource-group ${{ env.RESOURCE_GROUP }} \
+              --secrets \
+                cosmos-conn="$COSMOS_CONN" \
+                google-client-secret="$GOOGLE_SECRET" \
+                session-secret="$SESSION_SEC"
+          else
+            echo "⚠️ Skipping secret update — one or more secrets not set in GitHub Secrets"
+          fi
 
       - name: Deploy frontend to Container Apps
         run: |
