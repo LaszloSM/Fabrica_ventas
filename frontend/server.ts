@@ -160,7 +160,7 @@ app.all('/api/*', async (req, res) => {
       method: req.method,
       headers: {
         'Content-Type': 'application/json',
-        'x-user-id': user.id,
+        'x-user-id': user.dbId ?? user.id,
         'x-user-email': user.email,
         'x-user-role': user.role,
       },

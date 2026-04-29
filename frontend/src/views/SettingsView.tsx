@@ -302,7 +302,7 @@ function GoalsTab() {
   const [msg, setMsg] = useState('')
   const [error, setError] = useState('')
 
-  const isAdmin = currentUser?.role === 'ADMIN'
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPERADMIN'
 
   const loadGoals = () => {
     setLoading(true)
