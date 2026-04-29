@@ -54,7 +54,7 @@ class DealService:
         if line:
             query["line"] = line
 
-        docs = await self.collection.find(query).sort("updatedAt", -1).skip(skip).limit(limit).to_list(length=limit)
+        docs = await self.collection.find(query).skip(skip).limit(limit).to_list(length=limit)
         total = await self.collection.count_documents(query)
 
         deals = []
@@ -65,6 +65,8 @@ class DealService:
             except Exception as e:
                 logger.warning(f"[list_deals] Skipping invalid deal doc {doc.get('_id')}: {e}")
 
+        # Sort in-memory because Cosmos DB requires an index for $sort
+        deals.sort(key=lambda d: d.updatedAt or datetime.min, reverse=True)
         return (deals, total)
 
     async def get_aging_deals(self, days: int = 14) -> List[Deal]:

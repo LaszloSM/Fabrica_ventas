@@ -101,9 +101,12 @@ async def get_metrics(year: int = Query(2026), db=Depends(get_db)):
     leaderboard = sorted(owner_stats.values(), key=lambda x: x["won"], reverse=True)
 
     # Recent active deals (last 10, sorted by update)
+    # NOTE: Cosmos DB requires an index for $sort; we fetch and sort in-memory.
     recent_docs = await db["deals"].find(
         {"stage": {"$nin": ["GANADO", "PERDIDO"]}, "deleted": {"$ne": True}}
-    ).sort("updatedAt", -1).limit(10).to_list(length=10)
+    ).limit(200).to_list(length=200)
+    recent_docs.sort(key=lambda d: d.get("updatedAt") or datetime.min, reverse=True)
+    recent_docs = recent_docs[:10]
 
     recent_deals = []
     for doc in recent_docs:
