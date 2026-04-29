@@ -3,6 +3,9 @@ from app.models.deal import Deal
 from datetime import datetime, timedelta
 from typing import List, Optional
 import uuid
+import logging
+
+logger = logging.getLogger(__name__)
 
 class DealService:
     def __init__(self, db: AsyncIOMotorDatabase):
@@ -31,7 +34,11 @@ class DealService:
         doc = await self.collection.find_one({"_id": deal_id})
         if doc:
             doc["id"] = doc["_id"]
-            return Deal(**doc)
+            try:
+                return Deal(**doc)
+            except Exception as e:
+                logger.warning(f"[get_deal] Invalid deal doc {deal_id}: {e}")
+                return None
         return None
 
     async def list_deals(self, skip: int = 0, limit: int = 20,
@@ -53,7 +60,10 @@ class DealService:
         deals = []
         for doc in docs:
             doc["id"] = doc["_id"]
-            deals.append(Deal(**doc))
+            try:
+                deals.append(Deal(**doc))
+            except Exception as e:
+                logger.warning(f"[list_deals] Skipping invalid deal doc {doc.get('_id')}: {e}")
 
         return (deals, total)
 
@@ -68,7 +78,10 @@ class DealService:
         deals = []
         for doc in docs:
             doc["id"] = doc["_id"]
-            deals.append(Deal(**doc))
+            try:
+                deals.append(Deal(**doc))
+            except Exception as e:
+                logger.warning(f"[get_aging_deals] Skipping invalid deal doc {doc.get('_id')}: {e}")
         return deals
 
     async def move_to_stage(self, deal_id: str, new_stage: str, user_id: str) -> Optional[Deal]:

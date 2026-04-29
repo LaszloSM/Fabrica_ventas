@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field, field_validator
 class Deal(BaseModel):
     """Modelo de Oportunidad (Deal)"""
     id: Optional[str] = Field(None, alias="_id")
-    prospectId: str = Field(...)
+    prospectId: Optional[str] = Field(default=None)
     contactId: Optional[str] = None
     assignedTo: Optional[str] = None
     serviceType: Optional[str] = Field(default=None)
