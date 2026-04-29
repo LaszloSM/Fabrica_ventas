@@ -18,8 +18,13 @@ async def connect_to_mongo():
         else:
             client = AsyncIOMotorClient(settings.COSMOS_CONNECTION_STRING)
             db = client[settings.COSMOS_DATABASE]
-            await db.command('ping')
-            logger.info("✅ Conectado a Cosmos DB")
+            try:
+                await db.command('ping')
+                logger.info("✅ Conectado a Cosmos DB")
+            except Exception as ping_err:
+                # Soft-fail: connection string accepted, ping failed (throttling / transient).
+                # Motor is lazy — actual queries will re-connect. Don't crash the container.
+                logger.warning(f"⚠️ Cosmos DB ping failed (non-fatal): {ping_err}")
     except Exception as e:
         logger.error(f"❌ Error conectando a DB: {e}")
         raise

@@ -16,6 +16,16 @@ const API_PREFIX = '/api/v1'
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID!
 const oauthClient = new OAuth2Client(GOOGLE_CLIENT_ID)
 
+// ── Startup diagnostics ───────────────────────────────────────────────
+console.log(`[startup] PORT               = ${PORT}`)
+console.log(`[startup] NODE_ENV           = ${process.env.NODE_ENV ?? '(unset)'}`)
+console.log(`[startup] FASTAPI_BACKEND_URL= ${process.env.FASTAPI_BACKEND_URL ?? '(UNSET — using fallback localhost!)'}`)
+console.log(`[startup] FASTAPI_URL        = ${FASTAPI_URL}`)
+console.log(`[startup] GOOGLE_CLIENT_ID   = ${GOOGLE_CLIENT_ID ? 'SET' : 'UNSET ⚠️'}`)
+console.log(`[startup] COSMOSDB_CONN_STR  = ${process.env.COSMOSDB_CONN_STR ? 'SET' : '(unset — in-memory sessions)'}`)
+console.log(`[startup] SESSION_SECRET     = ${process.env.SESSION_SECRET ? 'SET' : '(using default)'}`)
+// ─────────────────────────────────────────────────────────────────────
+
 const isProd = process.env.NODE_ENV === 'production'
 
 app.set('trust proxy', 1)
@@ -59,10 +69,15 @@ app.post('/auth/google', async (req, res) => {
     let userRole = 'SALES'
     let userData: { role?: string; id?: string } | null = null
     let backendReachable = false
+    let lastError = ''
 
-    for (let attempt = 0; attempt < 2; attempt++) {
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        const userRes = await fetch(`${FASTAPI_URL}${API_PREFIX}/users/me`, {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 8000) // 8s timeout
+        const backendUrl = `${FASTAPI_URL}${API_PREFIX}/users/me`
+        const userRes = await fetch(backendUrl, {
+          signal: controller.signal,
           headers: {
             'x-user-email': payload.email!,
             'x-user-name': payload.name ?? '',
@@ -70,23 +85,33 @@ app.post('/auth/google', async (req, res) => {
             'x-user-role': 'SALES',
           }
         })
+        clearTimeout(timer)
+
         if (userRes.ok) {
           userData = await userRes.json()
           userRole = userData?.role ?? 'SALES'
           backendReachable = true
           break
+        } else {
+          lastError = `HTTP ${userRes.status} from ${backendUrl}`
+          console.error(`[auth] Backend returned ${userRes.status} on attempt ${attempt + 1} — ${backendUrl}`)
+          await new Promise(r => setTimeout(r, 800))
         }
-      } catch {
-        // retry
-        await new Promise(r => setTimeout(r, 500))
+      } catch (fetchErr: any) {
+        lastError = fetchErr?.name === 'AbortError'
+          ? `Timeout (>8s) reaching ${FASTAPI_URL}`
+          : `${fetchErr?.code ?? fetchErr?.name ?? 'FETCH_ERROR'}: ${fetchErr?.message}`
+        console.error(`[auth] Backend fetch attempt ${attempt + 1} failed: ${lastError}`)
+        await new Promise(r => setTimeout(r, 800))
       }
     }
 
     if (!backendReachable) {
-      console.error('[auth] Backend unreachable during login for:', payload.email)
+      console.error(`[auth] Backend unreachable after 3 attempts for ${payload.email}. Last error: ${lastError}`)
       return res.status(503).json({
         ok: false,
-        error: 'El sistema de usuarios no está disponible. Intenta nuevamente en unos segundos.'
+        error: 'El sistema de usuarios no está disponible. Intenta nuevamente en unos segundos.',
+        _debug: lastError,   // visible in browser console / Azure logs
       })
     }
 
@@ -143,6 +168,31 @@ app.get('/auth/session', async (req, res) => {
 app.post('/auth/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }))
 })
+
+// ── Diagnostic (no auth required) ────────────────────────────────────
+app.get('/check-backend', async (_req, res) => {
+  const url = `${FASTAPI_URL}/health`
+  try {
+    const controller = new AbortController()
+    setTimeout(() => controller.abort(), 6000)
+    const r = await fetch(url, { signal: controller.signal })
+    const body = await r.text()
+    res.json({
+      fastapi_url: FASTAPI_URL,
+      fastapi_backend_url_env: process.env.FASTAPI_BACKEND_URL ?? '(UNSET)',
+      status: r.status,
+      ok: r.ok,
+      body: body.slice(0, 300),
+    })
+  } catch (err: any) {
+    res.status(502).json({
+      fastapi_url: FASTAPI_URL,
+      fastapi_backend_url_env: process.env.FASTAPI_BACKEND_URL ?? '(UNSET)',
+      error: err?.name === 'AbortError' ? 'Timeout (>6s)' : `${err?.code ?? err?.name}: ${err?.message}`,
+    })
+  }
+})
+// ─────────────────────────────────────────────────────────────────────
 
 // ── API Proxy ─────────────────────────────────────────────────────────
 
