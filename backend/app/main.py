@@ -61,10 +61,27 @@ app.add_middleware(
 # Incluir routers
 app.include_router(api_router)
 
-# Health check
+# Health check — also tests DB connectivity
 @app.get("/health")
 async def health():
-    return {"status": "ok", "app": settings.APP_NAME}
+    db_status = "unknown"
+    db_error = None
+    try:
+        _db = await get_db()
+        if _db is not None:
+            await _db.command("ping")
+            db_status = "ok"
+        else:
+            db_status = "not_initialized"
+    except Exception as e:
+        db_status = "error"
+        db_error = str(e)[:200]
+    return {
+        "status": "ok" if db_status == "ok" else "degraded",
+        "app": settings.APP_NAME,
+        "db": db_status,
+        **({"db_error": db_error} if db_error else {}),
+    }
 
 # Root endpoint
 @app.get("/")

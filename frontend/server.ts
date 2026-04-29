@@ -171,26 +171,35 @@ app.post('/auth/logout', (req, res) => {
 
 // ── Diagnostic (no auth required) ────────────────────────────────────
 app.get('/check-backend', async (_req, res) => {
-  const url = `${FASTAPI_URL}/health`
-  try {
-    const controller = new AbortController()
-    setTimeout(() => controller.abort(), 6000)
-    const r = await fetch(url, { signal: controller.signal })
-    const body = await r.text()
-    res.json({
-      fastapi_url: FASTAPI_URL,
-      fastapi_backend_url_env: process.env.FASTAPI_BACKEND_URL ?? '(UNSET)',
-      status: r.status,
-      ok: r.ok,
-      body: body.slice(0, 300),
-    })
-  } catch (err: any) {
-    res.status(502).json({
-      fastapi_url: FASTAPI_URL,
-      fastapi_backend_url_env: process.env.FASTAPI_BACKEND_URL ?? '(UNSET)',
-      error: err?.name === 'AbortError' ? 'Timeout (>6s)' : `${err?.code ?? err?.name}: ${err?.message}`,
-    })
+  const probe = async (url: string, headers: Record<string,string> = {}) => {
+    try {
+      const ctrl = new AbortController()
+      setTimeout(() => ctrl.abort(), 8000)
+      const r = await fetch(url, { signal: ctrl.signal, headers })
+      const text = await r.text()
+      return { url, status: r.status, ok: r.ok, body: text.slice(0, 400) }
+    } catch (e: any) {
+      return { url, status: null, ok: false,
+               error: e?.name === 'AbortError' ? 'Timeout >8s' : `${e?.code ?? e?.name}: ${e?.message}` }
+    }
   }
+
+  const [health, usersMe] = await Promise.all([
+    probe(`${FASTAPI_URL}/health`),
+    probe(`${FASTAPI_URL}${API_PREFIX}/users/me`, {
+      'x-user-email': 'diag@health.check',
+      'x-user-name': 'diag',
+      'x-user-id': 'diag',
+      'x-user-role': 'SALES',
+    }),
+  ])
+
+  res.json({
+    fastapi_url: FASTAPI_URL,
+    fastapi_backend_url_env: process.env.FASTAPI_BACKEND_URL ?? '(UNSET)',
+    health,
+    users_me: usersMe,
+  })
 })
 // ─────────────────────────────────────────────────────────────────────
 
