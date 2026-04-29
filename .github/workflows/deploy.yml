@@ -41,6 +41,18 @@ jobs:
             coimpactobacr.azurecr.io/coimpactob-api-prod:${{ github.sha }}
             coimpactobacr.azurecr.io/coimpactob-api-prod:latest
 
+      - name: Store backend secrets in Container App
+        env:
+          COSMOS_CONN: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          APP_SECRET: ${{ secrets.SECRET_KEY }}
+        run: |
+          az containerapp secret set \
+            --name ${{ env.BACKEND_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --secrets \
+              cosmos-conn="$COSMOS_CONN" \
+              app-secret="$APP_SECRET"
+
       - name: Deploy backend to Container Apps
         run: |
           az containerapp update \
@@ -51,10 +63,10 @@ jobs:
               APP_NAME="CoimpactoB CRM API" \
               DEBUG="false" \
               USE_MOCK_DB="false" \
-              COSMOS_CONNECTION_STRING="${{ secrets.COSMOS_CONNECTION_STRING }}" \
               COSMOS_DATABASE="fabrica_ventas" \
-              SECRET_KEY="${{ secrets.SECRET_KEY }}" \
-              "CORS_ORIGINS=[\"${{ env.FRONTEND_URL }}\",\"http://localhost:3000\",\"http://localhost:8080\"]"
+              COSMOS_CONNECTION_STRING=secretref:cosmos-conn \
+              SECRET_KEY=secretref:app-secret \
+              CORS_ORIGINS="[\"${{ env.FRONTEND_URL }}\",\"http://localhost:3000\",\"http://localhost:8080\"]"
 
   deploy-frontend:
     name: Build & Deploy Frontend
@@ -86,6 +98,20 @@ jobs:
           build-args: |
             VITE_GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
 
+      - name: Store frontend secrets in Container App
+        env:
+          COSMOS_CONN: ${{ secrets.COSMOS_CONNECTION_STRING }}
+          GOOGLE_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          SESSION_SEC: ${{ secrets.SESSION_SECRET }}
+        run: |
+          az containerapp secret set \
+            --name ${{ env.FRONTEND_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --secrets \
+              cosmos-conn="$COSMOS_CONN" \
+              google-client-secret="$GOOGLE_SECRET" \
+              session-secret="$SESSION_SEC"
+
       - name: Deploy frontend to Container Apps
         run: |
           az containerapp update \
@@ -96,7 +122,7 @@ jobs:
               NODE_ENV="production" \
               FASTAPI_BACKEND_URL="${{ env.BACKEND_URL }}" \
               GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
-              GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-              SESSION_SECRET="${{ secrets.SESSION_SECRET }}" \
-              COSMOSDB_CONN_STR="${{ secrets.COSMOS_CONNECTION_STRING }}" \
-              PORT="8080"
+              PORT="8080" \
+              GOOGLE_CLIENT_SECRET=secretref:google-client-secret \
+              SESSION_SECRET=secretref:session-secret \
+              COSMOSDB_CONN_STR=secretref:cosmos-conn
