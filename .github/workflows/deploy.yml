@@ -47,9 +47,6 @@ jobs:
             --name ${{ env.BACKEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ env.REGISTRY }}/coimpactob-api-prod:${{ github.sha }} \
-            --registry-server ${{ env.REGISTRY }} \
-            --registry-username ${{ secrets.ACR_USERNAME }} \
-            --registry-password ${{ secrets.ACR_PASSWORD }} \
             --set-env-vars \
               APP_NAME="CoimpactoB CRM API" \
               DEBUG="false" \
@@ -95,9 +92,6 @@ jobs:
             --name ${{ env.FRONTEND_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --image ${{ env.REGISTRY }}/coimpactob-web-prod:${{ github.sha }} \
-            --registry-server ${{ env.REGISTRY }} \
-            --registry-username ${{ secrets.ACR_USERNAME }} \
-            --registry-password ${{ secrets.ACR_PASSWORD }} \
             --set-env-vars \
               NODE_ENV="production" \
               FASTAPI_BACKEND_URL="${{ env.BACKEND_URL }}" \
