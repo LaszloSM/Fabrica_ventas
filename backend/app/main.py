@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from app.config import settings
@@ -8,6 +9,7 @@ from app.services.scheduler_service import SchedulerService
 from app.services.ai_service import AIService
 from app.services.email_service import EmailService
 import logging
+import traceback
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +50,16 @@ app = FastAPI(
     description="CRM Backend - Fábrica de Ventas CoimpactoB",
     lifespan=lifespan
 )
+
+# Global exception handler — returns full traceback so we can diagnose 500s quickly
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    tb = traceback.format_exc()
+    logger.error(f"[500] {request.method} {request.url.path}\n{tb}")
+    return JSONResponse(
+        status_code=500,
+        content={"error": "Internal Server Error", "detail": str(exc), "traceback": tb.splitlines()},
+    )
 
 # CORS
 app.add_middleware(
