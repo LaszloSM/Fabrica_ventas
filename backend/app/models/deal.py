@@ -8,8 +8,8 @@ class Deal(BaseModel):
     prospectId: str = Field(...)
     contactId: Optional[str] = None
     assignedTo: Optional[str] = None
-    serviceType: str = Field(...)
-    line: str = Field(...)
+    serviceType: Optional[str] = Field(default=None)
+    line: Optional[str] = Field(default=None)
     businessUnit: Optional[str] = None
     segment: Optional[str] = None
     region: Optional[str] = None
