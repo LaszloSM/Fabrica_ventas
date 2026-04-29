@@ -23,6 +23,7 @@ RUN npx esbuild server.ts \
     --external:cors \
     --external:cookie-parser \
     --external:express-session \
+    --external:connect-mongo \
     --external:google-auth-library
 
 FROM node:20-alpine AS runner
