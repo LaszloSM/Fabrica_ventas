@@ -26,8 +26,7 @@ async def connect_to_mongo():
                 # Motor is lazy — actual queries will re-connect. Don't crash the container.
                 logger.warning(f"⚠️ Cosmos DB ping failed (non-fatal): {ping_err}")
     except Exception as e:
-        logger.error(f"❌ Error conectando a DB: {e}")
-        raise
+        logger.error(f"❌ Error conectando a DB (non-fatal, container will stay up): {e}")
 
 async def close_mongo_connection():
     global client
@@ -36,4 +35,7 @@ async def close_mongo_connection():
         logger.info("✅ Desconectado de DB")
 
 async def get_db() -> AsyncIOMotorDatabase:
+    if db is None:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
     return db
