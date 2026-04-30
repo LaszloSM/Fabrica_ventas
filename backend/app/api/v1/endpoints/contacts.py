@@ -65,13 +65,15 @@ async def list_contacts(
     docs = await db["contacts"].find(query).skip(skip).limit(limit).to_list(length=limit)
     total = await db["contacts"].count_documents(query)
 
-    # Enrich with prospect name
+    # Batch fetch prospects in a single query (replaces N+1 loop)
     prospect_ids = list({d["prospectId"] for d in docs if d.get("prospectId")})
-    prospects = {}
-    for pid in prospect_ids:
-        p = await db["prospects"].find_one({"_id": pid}, {"name": 1})
-        if p:
-            prospects[pid] = p["name"]
+    prospects: dict = {}
+    if prospect_ids:
+        async for p in db["prospects"].find(
+            {"_id": {"$in": prospect_ids}},
+            {"name": 1}
+        ):
+            prospects[p["_id"]] = p.get("name", "")
 
     items = []
     for doc in docs:

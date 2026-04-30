@@ -48,7 +48,7 @@ export function NewOpportunityModal({ isOpen, onClose }: Props) {
         region: 'Colombia',
       })
       const prospect = prospectRes?.data ?? prospectRes
-      if (!prospect?.id) { setError('No se pudo crear la cuenta. Intenta de nuevo.'); return }
+      if (!prospect?.id) { setError('No se pudo crear la oportunidad. Intenta de nuevo.'); return }
 
       // Create deal
       const deal = await api.post('/deals', {

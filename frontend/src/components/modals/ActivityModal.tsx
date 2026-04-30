@@ -24,18 +24,22 @@ export function ActivityModal({ isOpen, dealId, prospectId, onClose, onSaved }: 
   const [outcome, setOutcome] = useState('')
   const [notes, setNotes] = useState('')
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  const reset = () => { setOutcome(''); setNotes(''); setType('NOTE'); setError('') }
 
   const submit = async () => {
+    if (!outcome.trim()) { setError('El resultado es requerido.'); return }
+    setError('')
     setLoading(true)
     await api.post('/activities', {
       dealId,
       prospectId,
       type,
-      outcome: outcome || type,
+      outcome: outcome.trim(),
       notes,
     })
-    setOutcome('')
-    setNotes('')
+    reset()
     setLoading(false)
     onSaved()
     onClose()
@@ -74,13 +78,14 @@ export function ActivityModal({ isOpen, dealId, prospectId, onClose, onSaved }: 
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
-                <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Resultado</label>
+                <label className="text-xs font-bold text-on-surface-variant uppercase ml-1">Resultado *</label>
+                {error && <p className="text-xs text-red-600 ml-1">{error}</p>}
                 <input
                   type="text"
                   value={outcome}
-                  onChange={e => setOutcome(e.target.value)}
+                  onChange={e => { setOutcome(e.target.value); if (error) setError('') }}
                   placeholder="ej. Reunión agendada para el lunes"
-                  className="bg-surface border border-outline-variant rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary-container"
+                  className={`bg-surface border rounded-xl p-3 text-sm focus:outline-none focus:border-brand-primary-container ${error ? 'border-red-400' : 'border-outline-variant'}`}
                 />
               </div>
               <div className="flex flex-col gap-1.5">
@@ -94,7 +99,7 @@ export function ActivityModal({ isOpen, dealId, prospectId, onClose, onSaved }: 
               </div>
               <div className="flex gap-3 pt-2">
                 <button
-                  onClick={onClose}
+                  onClick={() => { reset(); onClose() }}
                   className="flex-1 py-3 bg-surface-container text-on-surface-variant rounded-xl font-bold hover:bg-outline-variant transition-colors"
                 >
                   Cancelar

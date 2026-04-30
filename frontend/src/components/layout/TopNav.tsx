@@ -1,13 +1,24 @@
 import React, { useState } from 'react'
-import { Search, Bell, Settings } from 'lucide-react'
+import { Search, Bell, Settings, Menu } from 'lucide-react'
 import { useAuth } from '../../context/AuthContext'
 
-export function TopNav() {
+interface Props {
+  onMenuClick?: () => void
+}
+
+export function TopNav({ onMenuClick }: Props) {
   const { user } = useAuth()
   const [search, setSearch] = useState('')
 
   return (
-    <header className="h-16 border-b border-outline-variant bg-white/80 backdrop-blur-md sticky top-0 z-40 flex justify-between items-center px-8">
+    <header className="h-16 border-b border-outline-variant bg-white/80 backdrop-blur-md sticky top-0 z-40 flex justify-between items-center px-4 lg:px-8">
+      <button
+        onClick={onMenuClick}
+        className="lg:hidden p-2 text-on-surface-variant hover:bg-surface-container rounded-full mr-2"
+        aria-label="Abrir menú"
+      >
+        <Menu size={22} />
+      </button>
       <div className="flex-1 max-w-md relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" size={18} />
         <input

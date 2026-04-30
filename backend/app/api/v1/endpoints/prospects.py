@@ -16,7 +16,8 @@ async def create_prospect(
     service: ProspectService = Depends(get_prospect_service)
 ):
     prospect = await service.create_prospect(prospect_data.model_dump())
-    return {"data": prospect.model_dump(by_alias=True)}
+    result = prospect.model_dump(by_alias=False)
+    return {"data": result}
 
 @router.get("")
 async def list_prospects(

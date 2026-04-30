@@ -22,14 +22,16 @@ interface Props {
   currentView: ViewType
   onViewChange: (v: ViewType) => void
   onNewOpportunity: () => void
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-export function Sidebar({ currentView, onViewChange, onNewOpportunity }: Props) {
+export function Sidebar({ currentView, onViewChange, onNewOpportunity, isOpen, onClose }: Props) {
   const { logout } = useAuth()
   const active = currentView === 'opportunity-detail' ? 'opportunities' : currentView
 
   return (
-    <aside className="w-[240px] h-screen border-r border-outline-variant bg-white flex flex-col fixed left-0 top-0 z-50">
+    <aside className={`w-[240px] h-screen border-r border-outline-variant bg-white flex flex-col fixed left-0 top-0 z-50 transition-transform duration-300 ${isOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0`}>
       <div className="p-6 border-b border-outline-variant/50">
         <div className="flex items-center gap-3">
           <div

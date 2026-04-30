@@ -22,7 +22,7 @@ interface Props {
 
 export function DealCard({ deal, onClick, dragHandleProps }: Props) {
   const borderColor = BORDER_COLORS[deal.stage] ?? 'border-l-brand-primary-container'
-  const name = deal.prospect?.name ?? deal.prospectName ?? '—'
+  const name = deal.prospect?.name || deal.prospectName || 'Sin nombre'
   const service = (deal.serviceType ?? '').replace(/_/g, ' ')
   const assignee = deal.assignedUser?.name ?? deal.assignedToName ?? '?'
 

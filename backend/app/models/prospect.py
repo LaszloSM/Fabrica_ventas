@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 class Prospect(BaseModel):
     """Modelo de Prospect (Empresa)"""
     id: Optional[str] = Field(None, alias="_id")
-    name: Optional[str] = Field(default="Sin nombre")
+    name: Optional[str] = Field(default=None)
     industry: Optional[str] = None
     size: Optional[str] = None
     region: Optional[str] = None
